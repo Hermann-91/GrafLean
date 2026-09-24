@@ -122,11 +122,41 @@ class ArchitectureWatcher:
                         file_sources[f_path] = f.read()
                 except Exception:
                     pass
+        nodes_data = []
+        for node in self.graph.nodes.values():
+            m = node.metrics
+            doc_text = f"💡 {node.docstring}" if node.docstring else "Sem descrição."
+            tooltip = f"🏷️ {node.name} ({node.symbol_type.value.upper()})\n{doc_text}"
+            nodes_data.append({
+                "id": node.id,
+                "label": node.name,
+                "title": tooltip,
+                "type": node.symbol_type.value,
+                "file": node.file_path,
+                "line": node.line,
+                "doc": node.docstring or "",
+                "ca": m.afferent_coupling,
+                "ce": m.efferent_coupling,
+                "instability": m.instability,
+                "deep": m.is_deep_module,
+                "cycle": m.has_cycles,
+                "git": node.git_status or ""
+            })
+
+        edges_data = []
+        for edge in self.graph.edges:
+            edges_data.append({
+                "source": edge.source_id,
+                "target": edge.target_id,
+                "type": edge.edge_type.value,
+                "desc": edge.description or ""
+            })
+
         return {
             "tree": tree_data,
             "sources": file_sources,
-            "nodes": [n.to_dict() for n in self.graph.nodes.values()],
-            "edges": [e.to_dict() for e in self.graph.edges]
+            "nodes": nodes_data,
+            "edges": edges_data
         }
 
     def build_initial(self) -> float:
