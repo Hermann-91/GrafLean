@@ -66,6 +66,12 @@ class ArchitectureWatcher:
         snapshots = {}
         for root, dirs, files in os.walk(self.target_dir):
             dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS and not d.startswith(".")]
+            for d in dirs:
+                dir_path = os.path.join(root, d)
+                try:
+                    snapshots[dir_path] = os.path.getmtime(dir_path)
+                except OSError:
+                    pass
             for file in files:
                 if file in ("arch_map.html", ".arch_graph.json"):
                     continue
@@ -236,6 +242,8 @@ class ArchitectureWatcher:
                     try:
                         created = create_folder(watcher.target_dir, folder_path)
                         rel_created = os.path.relpath(created, watcher.target_dir)
+                        watcher.build_initial()
+                        watcher.notify_clients()
                         return self._send_json(200, {"success": True, "created": rel_created})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
@@ -257,6 +265,8 @@ class ArchitectureWatcher:
                             custom_content=custom_content
                         )
                         rel_created = os.path.relpath(created, watcher.target_dir)
+                        watcher.build_initial()
+                        watcher.notify_clients()
                         return self._send_json(200, {"success": True, "created": rel_created})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
@@ -270,6 +280,8 @@ class ArchitectureWatcher:
                         from core.creator import rename_resource
                         renamed = rename_resource(watcher.target_dir, old_path, new_name)
                         rel_renamed = os.path.relpath(renamed, watcher.target_dir)
+                        watcher.build_initial()
+                        watcher.notify_clients()
                         return self._send_json(200, {"success": True, "renamed": rel_renamed})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
@@ -282,6 +294,8 @@ class ArchitectureWatcher:
                         from core.creator import delete_resource
                         deleted = delete_resource(watcher.target_dir, target_path)
                         rel_deleted = os.path.relpath(deleted, watcher.target_dir)
+                        watcher.build_initial()
+                        watcher.notify_clients()
                         return self._send_json(200, {"success": True, "deleted": rel_deleted})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})

@@ -102,7 +102,22 @@ class ProjectTreeBuilder:
         root_name = os.path.basename(self.root_dir) or "root"
         root = DirectoryNode(root_name, "")
 
-        # 1. Agrupa nós por arquivo
+        # 1. Descobre todos os diretórios reais no disco (inclusive pastas vazias recém-criadas)
+        ignored_dirs = {".git", ".svn", ".hg", "__pycache__", "node_modules", "vendor", ".idea", ".vscode"}
+        if os.path.exists(self.root_dir):
+            for root_path, dirs, _ in os.walk(self.root_dir):
+                dirs[:] = [d for d in dirs if d not in ignored_dirs and not d.startswith(".")]
+                rel_dir = os.path.relpath(root_path, self.root_dir)
+                if rel_dir == ".":
+                    continue
+                parts = rel_dir.split(os.sep)
+                curr = root
+                curr_p = ""
+                for part in parts:
+                    curr_p = os.path.join(curr_p, part) if curr_p else part
+                    curr = curr.get_or_create_dir(part, curr_p)
+
+        # 2. Agrupa nós por arquivo
         files_map: Dict[str, FileLeaf] = {}
         for node in self.nodes.values():
             rel_file = os.path.relpath(node.file_path, self.root_dir)
