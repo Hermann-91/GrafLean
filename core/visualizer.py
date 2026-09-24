@@ -87,13 +87,14 @@ class ArchitectureVisualizer:
         edges_json = safe_json(edges_data)
         tree_json = safe_json(tree_data)
         sources_json = safe_json(file_sources)
+        project_name = os.path.basename(os.path.abspath(self.graph.root_dir)) or "GrafLens"
 
         html_template = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sublime Architecture Lens — Workspace Integrado</title>
+    <title>{project_name} — GrafLens</title>
     <!-- Vis.js para Renderização de Grafo -->
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     
@@ -790,7 +791,7 @@ class ArchitectureVisualizer:
         <div class="workspace-header">
             <div>
                 <div class="brand-title">🏛️ GrafLens</div>
-                <div class="brand-sub">Workspace Integrado de Arquitetura & Orquestração</div>
+                <div class="brand-sub">📁 {project_name}</div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
                 <button class="sublime-btn" id="btn-reopen-nav" onclick="toggleNavSubpanel()" style="display:none;" title="Mostrar Árvore/Inspetor">
