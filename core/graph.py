@@ -51,8 +51,15 @@ class ProjectGraph:
                     all_nodes.extend(result.nodes)
                     all_edges.extend(result.edges)
 
+        # Rastreia status Git dos arquivos do projeto (< 5ms)
+        from core.git_tracker import GitTracker
+        git_tracker = GitTracker(self.root_dir)
+        git_status_map = git_tracker.get_status_map()
+
         # Indexa nós por ID (evitando duplicatas)
         for node in all_nodes:
+            if node.file_path in git_status_map:
+                node.git_status = git_status_map[node.file_path]
             self.nodes[node.id] = node
         self.edges = self._link_and_resolve_edges(all_edges)
 

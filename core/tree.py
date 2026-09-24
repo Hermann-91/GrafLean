@@ -27,9 +27,10 @@ class FileSystemComponent(ABC):
 class FileLeaf(FileSystemComponent):
     """Representa a folha (arquivo) no padrão Composite."""
 
-    def __init__(self, name: str, relative_path: str, full_id: str):
+    def __init__(self, name: str, relative_path: str, full_id: str, git_status: Optional[str] = None):
         super().__init__(name, relative_path)
         self.full_id = full_id
+        self.git_status = git_status
         self.symbols: List[Dict[str, Any]] = []
 
     def add_symbol(self, node: Node):
@@ -49,6 +50,7 @@ class FileLeaf(FileSystemComponent):
             "name": self.name,
             "relative_path": self.relative_path,
             "full_id": self.full_id,
+            "git_status": self.git_status,
             "symbols": sorted(self.symbols, key=lambda s: s["line"])
         }
 
@@ -107,7 +109,9 @@ class ProjectTreeBuilder:
             if rel_file not in files_map:
                 file_id = f"file://{node.file_path}"
                 file_name = os.path.basename(node.file_path)
-                files_map[rel_file] = FileLeaf(file_name, rel_file, file_id)
+                files_map[rel_file] = FileLeaf(file_name, rel_file, file_id, git_status=node.git_status)
+            elif node.git_status and not files_map[rel_file].git_status:
+                files_map[rel_file].git_status = node.git_status
 
             if node.symbol_type != SymbolType.FILE:
                 files_map[rel_file].add_symbol(node)

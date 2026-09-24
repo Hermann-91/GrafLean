@@ -53,6 +53,7 @@ class Node:
     docstring: Optional[str] = None        # Resumo ou docstring extraída
     metadata: Dict[str, Any] = field(default_factory=dict)
     metrics: ArchitectureMetrics = field(default_factory=ArchitectureMetrics)
+    git_status: Optional[str] = None       # Status Git: 'new', 'modified', 'deleted' ou None
 
     def to_dict(self) -> Dict[str, Any]:
         data = asdict(self)
