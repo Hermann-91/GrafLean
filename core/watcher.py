@@ -1,0 +1,213 @@
+"""
+Módulo de Monitoramento Contínuo e Sincronização em Tempo Real (Watch Mode).
+Utiliza exclusivamente a biblioteca padrão do Python (http.server, threading, time, os).
+Detecta alterações no sistema de arquivos, re-escaneia o grafo arquitetural
+e notifica os navegadores conectados via Server-Sent Events (SSE) para live reload instantâneo.
+"""
+
+import os
+import sys
+import time
+import json
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
+from typing import Dict, Set, Optional
+
+# Garante importação do core
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+from core.graph import ProjectGraph
+from core.visualizer import ArchitectureVisualizer
+
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Servidor HTTP multi-thread para conexões simultâneas de páginas e SSE."""
+    daemon_threads = True
+    allow_reuse_address = True
+
+
+class ArchitectureWatcher:
+    """
+    Monitor de Arquitetura em Tempo Real.
+    Combina varredura de mtime a cada intervalo definido com servidor HTTP/SSE integrado.
+    """
+
+    WATCH_EXTENSIONS = (
+        ".php", ".py", ".js", ".ts", ".jsx", ".tsx",
+        ".blade.php", ".html", ".css", ".json"
+    )
+
+    IGNORE_DIRS = {
+        ".git", "node_modules", "vendor", "__pycache__",
+        ".idea", ".vscode", "dist", "build", ".gemini"
+    }
+
+    def __init__(self, target_dir: str, port: int = 7357, poll_interval: float = 0.8):
+        self.target_dir = os.path.abspath(target_dir)
+        self.port = port
+        self.poll_interval = poll_interval
+        self.graph = ProjectGraph(self.target_dir)
+        self.visualizer = ArchitectureVisualizer(self.graph)
+        self.html_path = os.path.join(self.target_dir, "arch_map.html")
+
+        self.file_snapshots: Dict[str, float] = {}
+        self.clients: Set[BaseHTTPRequestHandler] = set()
+        self.clients_lock = threading.Lock()
+        self.running = False
+        self.server: Optional[ThreadedHTTPServer] = None
+        self._watcher_thread: Optional[threading.Thread] = None
+
+    def get_tracked_files(self) -> Dict[str, float]:
+        """Varre o diretório e retorna um dicionário {caminho_absoluto: mtime}."""
+        snapshots = {}
+        for root, dirs, files in os.walk(self.target_dir):
+            dirs[:] = [d for d in dirs if d not in self.IGNORE_DIRS and not d.startswith(".")]
+            for file in files:
+                if file in ("arch_map.html", ".arch_graph.json"):
+                    continue
+                if any(file.endswith(ext) for ext in self.WATCH_EXTENSIONS):
+                    full_path = os.path.join(root, file)
+                    try:
+                        snapshots[full_path] = os.path.getmtime(full_path)
+                    except OSError:
+                        pass
+        return snapshots
+
+    def has_changes(self, current: Dict[str, float]) -> bool:
+        """Verifica se houve arquivos adicionados, modificados ou removidos."""
+        if len(current) != len(self.file_snapshots):
+            return True
+        for path, mtime in current.items():
+            if path not in self.file_snapshots or self.file_snapshots[path] != mtime:
+                return True
+        return False
+
+    def notify_clients(self):
+        """Dispara evento SSE 'reload' para todos os navegadores conectados."""
+        with self.clients_lock:
+            disconnected = set()
+            for client in self.clients:
+                try:
+                    msg = "event: reload\ndata: {}\n\n".encode("utf-8")
+                    client.wfile.write(msg)
+                    client.wfile.flush()
+                except Exception:
+                    disconnected.add(client)
+            self.clients -= disconnected
+
+    def build_initial(self) -> float:
+        """Executa a primeira indexação e gera o HTML inicial."""
+        start = time.perf_counter()
+        self.graph.scan_project()
+        self.graph.save_to_file()
+        self.visualizer.generate_html(self.html_path)
+        self.file_snapshots = self.get_tracked_files()
+        duration_ms = (time.perf_counter() - start) * 1000
+        return duration_ms
+
+    def start_watching(self, open_browser: bool = True):
+        """Inicia o monitoramento de arquivos e o servidor HTTP."""
+        duration_ms = self.build_initial()
+        print(f"🚀 [Watch Mode] Indexação inicial concluída em {duration_ms:.1f}ms!")
+        print(f"📊 {len(self.graph.nodes)} nós e {len(self.graph.edges)} conexões mapeadas.")
+        print(f"📡 Servidor ativo em: http://localhost:{self.port}")
+        print(f"👀 Monitorando alterações em: {self.target_dir}")
+        print("Pressione Ctrl+C para encerrar.\n")
+
+        if open_browser:
+            import webbrowser
+            webbrowser.open(f"http://localhost:{self.port}")
+
+        self.running = True
+        self._watcher_thread = threading.Thread(target=self._watch_loop, daemon=True)
+        self._watcher_thread.start()
+
+        self._start_server()
+
+    def _watch_loop(self):
+        """Loop de monitoramento que roda em thread secundária."""
+        while self.running:
+            time.sleep(self.poll_interval)
+            current = self.get_tracked_files()
+            if self.has_changes(current):
+                start = time.perf_counter()
+                try:
+                    self.graph.scan_project()
+                    self.graph.save_to_file()
+                    self.visualizer.generate_html(self.html_path)
+                    self.file_snapshots = current
+                    elapsed = (time.perf_counter() - start) * 1000
+                    print(f"🔄 [Watch] Alteração detectada! Mapa atualizado em {elapsed:.1f}ms. Sincronizando navegador...")
+                    self.notify_clients()
+                except Exception as e:
+                    print(f"⚠️ [Watch] Erro ao re-escanear: {e}")
+
+    def _start_server(self):
+        """Inicializa o servidor HTTP nativo."""
+        watcher = self
+
+        class WatcherHandler(BaseHTTPRequestHandler):
+            def log_message(self, format, *args):
+                pass  # Mantém o terminal limpo
+
+            def do_GET(self):
+                if self.path == "/events":
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.send_header("Cache-Control", "no-cache")
+                    self.send_header("Connection", "keep-alive")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+
+                    with watcher.clients_lock:
+                        watcher.clients.add(self)
+
+                    try:
+                        while watcher.running:
+                            time.sleep(15)
+                            self.wfile.write(b": ping\n\n")
+                            self.wfile.flush()
+                    except Exception:
+                        pass
+                    finally:
+                        with watcher.clients_lock:
+                            watcher.clients.discard(self)
+
+                elif self.path in ("/", "/index.html", "/arch_map.html"):
+                    if not os.path.exists(watcher.html_path):
+                        self.send_error(404, "Mapa arquitetural não encontrado.")
+                        return
+                    try:
+                        with open(watcher.html_path, "rb") as f:
+                            content = f.read()
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/html; charset=utf-8")
+                        self.send_header("Content-Length", str(len(content)))
+                        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                        self.end_headers()
+                        self.wfile.write(content)
+                    except Exception as e:
+                        self.send_error(500, str(e))
+                else:
+                    self.send_error(404, "Arquivo não encontrado.")
+
+        try:
+            self.server = ThreadedHTTPServer(("127.0.0.1", self.port), WatcherHandler)
+            self.server.serve_forever()
+        except KeyboardInterrupt:
+            print("\n🛑 Encerrando Watch Mode...")
+        finally:
+            self.stop()
+
+    def stop(self):
+        self.running = False
+        if self.server:
+            try:
+                self.server.shutdown()
+                self.server.server_close()
+            except Exception:
+                pass
