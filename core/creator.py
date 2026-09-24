@@ -100,6 +100,24 @@ def create_folder(base_dir: str, relative_path: str) -> str:
     return full_path
 
 
+def create_file(base_dir: str, relative_path: str, content: str = "") -> str:
+    """
+    Cria um arquivo vazio (ou com conteúdo customizado) de forma segura.
+    Suporta qualquer extensão e não força inserção de texto ou templates.
+    """
+    if not is_safe_path(base_dir, relative_path):
+        raise ValueError(f"Caminho inseguro detectado (Path Traversal): {relative_path}")
+
+    full_path = os.path.abspath(os.path.join(base_dir, relative_path))
+    parent_dir = os.path.dirname(full_path)
+    os.makedirs(parent_dir, exist_ok=True)
+
+    with open(full_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    return full_path
+
+
 def create_markdown_spec(
     base_dir: str,
     relative_path: str,

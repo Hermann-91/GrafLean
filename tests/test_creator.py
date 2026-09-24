@@ -9,7 +9,7 @@ import shutil
 import tempfile
 import unittest
 from core.creator import (
-    create_folder, create_markdown_spec, is_safe_path,
+    create_folder, create_file, create_markdown_spec, is_safe_path,
     rename_resource, delete_resource, save_file_content, TEMPLATES
 )
 
@@ -112,6 +112,19 @@ class TestProjectCreator(unittest.TestCase):
     def test_save_file_content_traversal_rejection(self):
         with self.assertRaises(ValueError):
             save_file_content(self.test_dir, "../../evil.sh", "echo bad")
+
+    def test_create_file_empty_and_custom_extension(self):
+        file_path = create_file(self.test_dir, "teste.php")
+        self.assertTrue(os.path.isfile(file_path))
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertEqual(content, "")
+
+        # Teste com conteúdo customizado
+        file_path_custom = create_file(self.test_dir, "src/config.json", '{"key": "value"}')
+        self.assertTrue(os.path.isfile(file_path_custom))
+        with open(file_path_custom, "r", encoding="utf-8") as f:
+            self.assertEqual(f.read(), '{"key": "value"}')
 
 
 if __name__ == "__main__":
