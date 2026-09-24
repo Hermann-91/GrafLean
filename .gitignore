@@ -1,0 +1,12 @@
+# Bytecode e cache do Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Arquivos gerados durante testes ou mapas locais
+.arch_graph.json
+arch_map.html
+
+# IDEs
+.vscode/
+.idea/
