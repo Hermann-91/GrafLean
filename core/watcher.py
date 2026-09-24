@@ -280,20 +280,13 @@ class ArchitectureWatcher:
 
                 elif self.path == "/api/create-file":
                     file_path = payload.get("path", "").strip()
-                    template = payload.get("template", "task")
-                    context_data = payload.get("context", {})
-                    custom_content = payload.get("content")
+                    custom_content = payload.get("content", "")
 
                     if not file_path:
                         return self._send_json(400, {"success": False, "error": "Caminho do arquivo é obrigatório."})
                     try:
-                        created = create_markdown_spec(
-                            watcher.target_dir,
-                            file_path,
-                            template_key=template,
-                            context_data=context_data,
-                            custom_content=custom_content
-                        )
+                        from core.creator import create_file
+                        created = create_file(watcher.target_dir, file_path, content=custom_content)
                         rel_created = os.path.relpath(created, watcher.target_dir)
                         watcher.build_initial()
                         watcher.notify_clients()
