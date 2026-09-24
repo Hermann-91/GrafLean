@@ -147,12 +147,30 @@ class ArchitectureWatcher:
                     print(f"⚠️ [Watch] Erro ao re-escanear: {e}")
 
     def _start_server(self):
-        """Inicializa o servidor HTTP nativo."""
+        from core.creator import create_folder, create_markdown_spec, TEMPLATES
         watcher = self
 
         class WatcherHandler(BaseHTTPRequestHandler):
             def log_message(self, format, *args):
                 pass  # Mantém o terminal limpo
+
+            def _send_json(self, status_code: int, data: dict):
+                body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+                self.send_response(status_code)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_OPTIONS(self):
+                self.send_response(204)
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.end_headers()
 
             def do_GET(self):
                 if self.path == "/events":
@@ -177,6 +195,12 @@ class ArchitectureWatcher:
                         with watcher.clients_lock:
                             watcher.clients.discard(self)
 
+                elif self.path == "/api/templates":
+                    self._send_json(200, {
+                        "templates": list(TEMPLATES.keys()),
+                        "examples": {k: TEMPLATES[k][:120] + "..." for k in TEMPLATES}
+                    })
+
                 elif self.path in ("/", "/index.html", "/arch_map.html"):
                     if not os.path.exists(watcher.html_path):
                         self.send_error(404, "Mapa arquitetural não encontrado.")
@@ -194,6 +218,48 @@ class ArchitectureWatcher:
                         self.send_error(500, str(e))
                 else:
                     self.send_error(404, "Arquivo não encontrado.")
+
+            def do_POST(self):
+                content_len = int(self.headers.get("Content-Length", 0))
+                raw_body = self.rfile.read(content_len).decode("utf-8") if content_len > 0 else "{}"
+                try:
+                    payload = json.loads(raw_body)
+                except Exception:
+                    payload = {}
+
+                if self.path == "/api/create-folder":
+                    folder_path = payload.get("path", "").strip()
+                    if not folder_path:
+                        return self._send_json(400, {"success": False, "error": "Caminho da pasta é obrigatório."})
+                    try:
+                        created = create_folder(watcher.target_dir, folder_path)
+                        rel_created = os.path.relpath(created, watcher.target_dir)
+                        return self._send_json(200, {"success": True, "created": rel_created})
+                    except Exception as e:
+                        return self._send_json(400, {"success": False, "error": str(e)})
+
+                elif self.path == "/api/create-file":
+                    file_path = payload.get("path", "").strip()
+                    template = payload.get("template", "task")
+                    context_data = payload.get("context", {})
+                    custom_content = payload.get("content")
+
+                    if not file_path:
+                        return self._send_json(400, {"success": False, "error": "Caminho do arquivo é obrigatório."})
+                    try:
+                        created = create_markdown_spec(
+                            watcher.target_dir,
+                            file_path,
+                            template_key=template,
+                            context_data=context_data,
+                            custom_content=custom_content
+                        )
+                        rel_created = os.path.relpath(created, watcher.target_dir)
+                        return self._send_json(200, {"success": True, "created": rel_created})
+                    except Exception as e:
+                        return self._send_json(400, {"success": False, "error": str(e)})
+
+                self._send_json(404, {"success": False, "error": "Rota não encontrada."})
 
         try:
             self.server = ThreadedHTTPServer(("127.0.0.1", self.port), WatcherHandler)
