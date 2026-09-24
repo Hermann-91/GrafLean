@@ -51,6 +51,30 @@ class TestArchitectureWatcher(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.temp_dir, "arch_map.html")))
         self.assertTrue(os.path.exists(os.path.join(self.temp_dir, ".arch_graph.json")))
 
+    def test_get_live_data_structure(self):
+        watcher = ArchitectureWatcher(self.temp_dir, port=9999)
+        watcher.build_initial()
+        data = watcher.get_live_data()
+        self.assertIn("tree", data)
+        self.assertIn("sources", data)
+        self.assertIn("nodes", data)
+        self.assertIn("edges", data)
+        self.assertEqual(data["tree"]["type"], "directory")
+        self.assertIn(self.file1, data["sources"])
+
+    def test_delete_file_purges_from_graph_and_live_data(self):
+        watcher = ArchitectureWatcher(self.temp_dir, port=9999)
+        watcher.build_initial()
+        self.assertIn(self.file1, watcher.get_live_data()["sources"])
+
+        # Deleta o arquivo e re-escaneia
+        os.remove(self.file1)
+        watcher.build_initial()
+        live_data = watcher.get_live_data()
+        self.assertNotIn(self.file1, live_data["sources"])
+        node_files = [n["file"] for n in live_data["nodes"]]
+        self.assertNotIn(self.file1, node_files)
+
 
 if __name__ == "__main__":
     unittest.main()
