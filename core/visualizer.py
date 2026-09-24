@@ -1011,68 +1011,72 @@ class ArchitectureVisualizer:
 
         function applyLiveUpdate(data) {{
             if (!data) return;
-            if (data.tree) {{
-                rawTree = data.tree;
-                const treeRoot = document.getElementById('tree-root');
-                if (treeRoot) {{
-                    treeRoot.innerHTML = '';
-                    renderTree(rawTree, treeRoot);
-                }}
-            }}
-            if (data.sources) {{
-                rawFileSources = data.sources;
-            }}
-            if (data.nodes && (typeof nodes !== 'undefined' || window.nodes)) {{
-                const targetNodes = typeof nodes !== 'undefined' ? nodes : window.nodes;
-                rawNodes = data.nodes;
-                const currentIds = new Set(data.nodes.map(n => n.id));
-                const existingIds = targetNodes.getIds();
-                const toRemove = existingIds.filter(id => !currentIds.has(id));
-                if (toRemove.length > 0) targetNodes.remove(toRemove);
-                targetNodes.update(data.nodes.map(n => ({{
-                    id: n.id,
-                    label: n.label,
-                    title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + n.title,
-                    color: {{
-                        background: n.type === "file" ? "#2a281e" : (colorMap[n.type] || "#cdd6f4"),
-                        border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (n.type === "file" ? "#f9e2af" : (n.cycle ? "#f38ba8" : (n.deep ? "#a6e3a1" : "#45475a"))))
-                    }},
-                    borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (n.type === "file" ? 2 : (n.cycle ? 3 : 1)),
-                    size: Math.max(12, Math.min(30, 10 + n.ca * 3)),
-                    shape: n.type === "file" ? "box" : "dot",
-                    font: {{
-                        color: n.type === "file" ? "#f9e2af" : "#cdd6f4",
-                        size: n.type === "file" ? 11 : 12,
-                        bold: n.type === "file"
+            try {{
+                if (data.tree) {{
+                    rawTree = data.tree;
+                    const treeRoot = document.getElementById('tree-root');
+                    if (treeRoot) {{
+                        treeRoot.innerHTML = '';
+                        renderTree(rawTree, treeRoot);
                     }}
-                }})));
-                if (typeof network !== 'undefined') network.redraw();
-            }}
-            if (data.edges && (typeof edges !== 'undefined' || window.edges)) {{
-                const targetEdges = typeof edges !== 'undefined' ? edges : window.edges;
-                rawEdges = data.edges;
-                targetEdges.clear();
-                targetEdges.add(data.edges.map(e => ({{
-                    from: e.source,
-                    to: e.target,
-                    arrows: "to",
-                    color: {{ color: "#45475a", highlight: "#89b4fa" }},
-                    width: 1
-                }})));
-                if (typeof network !== 'undefined') network.redraw();
-            }}
-            if (currentLoadedFilePath && !rawFileSources[currentLoadedFilePath]) {{
-                currentLoadedFilePath = null;
-                const textarea = document.getElementById('sublime-editor-textarea');
-                if (textarea) textarea.value = '';
-                const tableContainer = document.getElementById('sublime-table-container');
-                if (tableContainer) {{
-                    tableContainer.innerHTML = '<div style="padding: 20px; color: #75715e; font-family: monospace;">// Nenhum arquivo selecionado</div>';
                 }}
-                const pathEl = document.getElementById('sublime-tab-path');
-                if (pathEl) pathEl.innerText = 'Nenhum arquivo selecionado';
-                const badgeEl = document.getElementById('sublime-git-badge');
-                if (badgeEl) badgeEl.innerHTML = '';
+                if (data.sources) {{
+                    rawFileSources = data.sources;
+                }}
+                if (data.nodes && (typeof nodes !== 'undefined' || window.nodes)) {{
+                    const targetNodes = typeof nodes !== 'undefined' ? nodes : window.nodes;
+                    rawNodes = data.nodes;
+                    const currentIds = new Set(data.nodes.map(n => n.id));
+                    const existingIds = targetNodes.getIds();
+                    const toRemove = existingIds.filter(id => !currentIds.has(id));
+                    if (toRemove.length > 0) targetNodes.remove(toRemove);
+                    targetNodes.update(data.nodes.map(n => ({{
+                        id: n.id,
+                        label: n.label || n.name,
+                        title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + (n.title || n.name),
+                        color: {{
+                            background: n.type === "file" ? "#2a281e" : (colorMap[n.type] || "#cdd6f4"),
+                            border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (n.type === "file" ? "#f9e2af" : (n.cycle ? "#f38ba8" : (n.deep ? "#a6e3a1" : "#45475a"))))
+                        }},
+                        borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (n.type === "file" ? 2 : (n.cycle ? 3 : 1)),
+                        size: Math.max(12, Math.min(30, 10 + (n.ca || 0) * 3)),
+                        shape: n.type === "file" ? "box" : "dot",
+                        font: {{
+                            color: n.type === "file" ? "#f9e2af" : "#cdd6f4",
+                            size: n.type === "file" ? 11 : 12,
+                            bold: n.type === "file"
+                        }}
+                    }})));
+                    if (typeof network !== 'undefined') network.redraw();
+                }}
+                if (data.edges && (typeof edges !== 'undefined' || window.edges)) {{
+                    const targetEdges = typeof edges !== 'undefined' ? edges : window.edges;
+                    rawEdges = data.edges;
+                    targetEdges.clear();
+                    targetEdges.add(data.edges.filter(e => e.source && e.target).map(e => ({{
+                        from: e.source,
+                        to: e.target,
+                        arrows: "to",
+                        color: {{ color: "#45475a", highlight: "#89b4fa" }},
+                        width: 1
+                    }})));
+                    if (typeof network !== 'undefined') network.redraw();
+                }}
+                if (currentLoadedFilePath && !rawFileSources[currentLoadedFilePath]) {{
+                    currentLoadedFilePath = null;
+                    const textarea = document.getElementById('sublime-editor-textarea');
+                    if (textarea) textarea.value = '';
+                    const tableContainer = document.getElementById('sublime-table-container');
+                    if (tableContainer) {{
+                        tableContainer.innerHTML = '<div style="padding: 20px; color: #75715e; font-family: monospace;">// Nenhum arquivo selecionado</div>';
+                    }}
+                    const pathEl = document.getElementById('sublime-tab-path');
+                    if (pathEl) pathEl.innerText = 'Nenhum arquivo selecionado';
+                    const badgeEl = document.getElementById('sublime-git-badge');
+                    if (badgeEl) badgeEl.innerHTML = '';
+                }}
+            }} catch (err) {{
+                console.error("Erro ao aplicar live update:", err);
             }}
         }}
 
