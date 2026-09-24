@@ -12,7 +12,7 @@ import json
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, Any
 
 # Garante importação do core
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -93,17 +93,41 @@ class ArchitectureWatcher:
         return False
 
     def notify_clients(self):
-        """Dispara evento SSE 'reload' para todos os navegadores conectados."""
+        """Dispara evento SSE 'update' reativo para todos os navegadores conectados."""
         with self.clients_lock:
             disconnected = set()
             for client in self.clients:
                 try:
-                    msg = "event: reload\ndata: {}\n\n".encode("utf-8")
+                    msg = "event: update\ndata: {}\n\n".encode("utf-8")
                     client.wfile.write(msg)
                     client.wfile.flush()
                 except Exception:
                     disconnected.add(client)
             self.clients -= disconnected
+
+    def get_live_data(self) -> Dict[str, Any]:
+        """Retorna os dados reativos da árvore e arquivos em memória."""
+        from core.tree import ProjectTreeBuilder
+        tree_builder = ProjectTreeBuilder(self.graph.root_dir, self.graph.nodes)
+        tree_data = tree_builder.build().to_dict()
+        file_sources = {}
+        all_paths = set(node.file_path for node in self.graph.nodes.values() if node.file_path)
+        if hasattr(tree_builder, "files_map"):
+            for rel_f in tree_builder.files_map.keys():
+                all_paths.add(os.path.join(self.graph.root_dir, rel_f))
+        for f_path in all_paths:
+            if os.path.isfile(f_path) and os.path.getsize(f_path) <= 500 * 1024:
+                try:
+                    with open(f_path, "r", encoding="utf-8", errors="replace") as f:
+                        file_sources[f_path] = f.read()
+                except Exception:
+                    pass
+        return {
+            "tree": tree_data,
+            "sources": file_sources,
+            "nodes": [n.to_dict() for n in self.graph.nodes.values()],
+            "edges": [e.to_dict() for e in self.graph.edges]
+        }
 
     def build_initial(self) -> float:
         """Executa a primeira indexação e gera o HTML inicial."""
@@ -209,6 +233,12 @@ class ArchitectureWatcher:
                         "examples": {k: TEMPLATES[k][:120] + "..." for k in TEMPLATES}
                     })
 
+                elif self.path == "/api/data":
+                    return self._send_json(200, {
+                        "success": True,
+                        "data": watcher.get_live_data()
+                    })
+
                 elif self.path in ("/", "/index.html", "/arch_map.html"):
                     if not os.path.exists(watcher.html_path):
                         self.send_error(404, "Mapa arquitetural não encontrado.")
@@ -244,7 +274,7 @@ class ArchitectureWatcher:
                         rel_created = os.path.relpath(created, watcher.target_dir)
                         watcher.build_initial()
                         watcher.notify_clients()
-                        return self._send_json(200, {"success": True, "created": rel_created})
+                        return self._send_json(200, {"success": True, "created": rel_created, "data": watcher.get_live_data()})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
 
@@ -267,7 +297,7 @@ class ArchitectureWatcher:
                         rel_created = os.path.relpath(created, watcher.target_dir)
                         watcher.build_initial()
                         watcher.notify_clients()
-                        return self._send_json(200, {"success": True, "created": rel_created})
+                        return self._send_json(200, {"success": True, "created": rel_created, "data": watcher.get_live_data()})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
 
@@ -282,7 +312,7 @@ class ArchitectureWatcher:
                         rel_renamed = os.path.relpath(renamed, watcher.target_dir)
                         watcher.build_initial()
                         watcher.notify_clients()
-                        return self._send_json(200, {"success": True, "renamed": rel_renamed})
+                        return self._send_json(200, {"success": True, "renamed": rel_renamed, "data": watcher.get_live_data()})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
 
@@ -296,7 +326,7 @@ class ArchitectureWatcher:
                         rel_deleted = os.path.relpath(deleted, watcher.target_dir)
                         watcher.build_initial()
                         watcher.notify_clients()
-                        return self._send_json(200, {"success": True, "deleted": rel_deleted})
+                        return self._send_json(200, {"success": True, "deleted": rel_deleted, "data": watcher.get_live_data()})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
 
@@ -311,7 +341,7 @@ class ArchitectureWatcher:
                         rel_saved = os.path.relpath(saved, watcher.target_dir)
                         watcher.build_initial()
                         watcher.notify_clients()
-                        return self._send_json(200, {"success": True, "saved": rel_saved})
+                        return self._send_json(200, {"success": True, "saved": rel_saved, "data": watcher.get_live_data()})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
 
