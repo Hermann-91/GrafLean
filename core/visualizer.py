@@ -724,6 +724,34 @@ class ArchitectureVisualizer:
             display: none;
         }}
 
+        /* Toast Notificação Moderna e Não Bloqueante */
+        .graf-toast {{
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 10px 18px;
+            border-radius: 6px;
+            border: 1px solid #a6e3a1;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            z-index: 999999;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }}
+        .graf-toast.show {{
+            opacity: 1;
+            transform: translateY(0);
+        }}
+        .graf-toast.error {{
+            border-color: #f38ba8;
+            color: #f38ba8;
+        }}
+
         /* Tabela com Gutter e Código 100% Monokai */
         .sublime-table {{
             width: 100%;
@@ -955,13 +983,105 @@ class ArchitectureVisualizer:
     <script type="application/json" id="data-sources">{sources_json}</script>
 
     <script>
-        const rawNodes = JSON.parse(document.getElementById('data-nodes').textContent);
-        const rawEdges = JSON.parse(document.getElementById('data-edges').textContent);
-        const rawTree = JSON.parse(document.getElementById('data-tree').textContent);
-        const rawFileSources = JSON.parse(document.getElementById('data-sources').textContent);
+        let rawNodes = JSON.parse(document.getElementById('data-nodes').textContent);
+        let rawEdges = JSON.parse(document.getElementById('data-edges').textContent);
+        let rawTree = JSON.parse(document.getElementById('data-tree').textContent);
+        let rawFileSources = JSON.parse(document.getElementById('data-sources').textContent);
         let currentNavTab = 'tree';
         let isEditMode = false;
         let currentLoadedFilePath = null;
+        let openFolders = new Set(JSON.parse(localStorage.getItem('graf_lens_open_folders') || '[""]'));
+
+        function showToast(message, type = 'info') {{
+            let toast = document.getElementById('graf-toast');
+            if (!toast) {{
+                toast = document.createElement('div');
+                toast.id = 'graf-toast';
+                toast.className = 'graf-toast';
+                document.body.appendChild(toast);
+            }}
+            toast.className = 'graf-toast' + (type === 'error' ? ' error' : '');
+            toast.innerText = message;
+            toast.classList.add('show');
+            clearTimeout(window.__graf_toast_timeout);
+            window.__graf_toast_timeout = setTimeout(() => {{
+                toast.classList.remove('show');
+            }}, 2600);
+        }}
+
+        function applyLiveUpdate(data) {{
+            if (!data) return;
+            if (data.tree) {{
+                rawTree = data.tree;
+                const treeRoot = document.getElementById('tree-root');
+                if (treeRoot) {{
+                    treeRoot.innerHTML = '';
+                    renderTree(rawTree, treeRoot);
+                }}
+            }}
+            if (data.sources) {{
+                rawFileSources = data.sources;
+            }}
+            if (data.nodes && window.nodes) {{
+                rawNodes = data.nodes;
+                const currentIds = new Set(data.nodes.map(n => n.id));
+                const existingIds = nodes.getIds();
+                const toRemove = existingIds.filter(id => !currentIds.has(id));
+                if (toRemove.length > 0) nodes.remove(toRemove);
+                nodes.update(data.nodes.map(n => ({{
+                    id: n.id,
+                    label: n.label,
+                    title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + n.title,
+                    color: {{
+                        background: n.type === "file" ? "#2a281e" : (colorMap[n.type] || "#cdd6f4"),
+                        border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (n.type === "file" ? "#f9e2af" : (n.cycle ? "#f38ba8" : (n.deep ? "#a6e3a1" : "#45475a"))))
+                    }},
+                    borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (n.type === "file" ? 2 : (n.cycle ? 3 : 1)),
+                    size: Math.max(12, Math.min(30, 10 + n.ca * 3)),
+                    shape: n.type === "file" ? "box" : "dot",
+                    font: {{
+                        color: n.type === "file" ? "#f9e2af" : "#cdd6f4",
+                        size: n.type === "file" ? 11 : 12,
+                        bold: n.type === "file"
+                    }}
+                }})));
+            }}
+            if (data.edges && window.edges) {{
+                rawEdges = data.edges;
+                edges.clear();
+                edges.add(data.edges.map(e => ({{
+                    from: e.source,
+                    to: e.target,
+                    arrows: "to",
+                    color: {{ color: "#45475a", highlight: "#89b4fa" }},
+                    width: 1
+                }})));
+            }}
+            if (currentLoadedFilePath && !rawFileSources[currentLoadedFilePath]) {{
+                currentLoadedFilePath = null;
+                const textarea = document.getElementById('sublime-editor-textarea');
+                if (textarea) textarea.value = '';
+                const tableContainer = document.getElementById('sublime-table-container');
+                if (tableContainer) {{
+                    tableContainer.innerHTML = '<div style="padding: 20px; color: #75715e; font-family: monospace;">// Nenhum arquivo selecionado</div>';
+                }}
+                const pathEl = document.getElementById('sublime-tab-path');
+                if (pathEl) pathEl.innerText = 'Nenhum arquivo selecionado';
+                const badgeEl = document.getElementById('sublime-git-badge');
+                if (badgeEl) badgeEl.innerHTML = '';
+            }}
+        }}
+
+        async function fetchLiveUpdate() {{
+            try {{
+                const res = await fetch('/api/data');
+                if (!res.ok) return;
+                const json = await res.json();
+                if (json.success && json.data) {{
+                    applyLiveUpdate(json.data);
+                }}
+            }} catch (e) {{}}
+        }}
 
         const colorMap = {{
             "class": "#89b4fa",
@@ -1246,7 +1366,7 @@ class ArchitectureVisualizer:
         function copyAgentPrompt() {{
             const node = Mediator.currentNode;
             if (!node) {{
-                alert('Selecione um arquivo ou classe para copiar o contexto.');
+                showToast('⚠️ Selecione um arquivo ou classe para copiar o contexto.', 'error');
                 return;
             }}
             const callers = rawEdges.filter(e => e.target === node.id).map(e => formatConnLabel(e.source)).join(', ') || 'Nenhum chamador direto';
@@ -1267,7 +1387,7 @@ class ArchitectureVisualizer:
 
             if (navigator.clipboard && navigator.clipboard.writeText) {{
                 navigator.clipboard.writeText(promptText).then(() => {{
-                    alert('📋 Prompt arquitetural copiado com sucesso!\\nPronto para colar no terminal do seu agente.');
+                    showToast('📋 Prompt arquitetural copiado com sucesso! Pronto para colar no seu agente.');
                 }}).catch(() => {{
                     window.prompt('Copie o prompt abaixo:', promptText);
                 }});
@@ -1282,6 +1402,8 @@ class ArchitectureVisualizer:
                 const dirDiv = document.createElement('div');
                 dirDiv.className = 'tree-node';
 
+                const isOpen = openFolders.has(comp.relative_path) || comp.relative_path === '' || openFolders.size === 0;
+
                 const row = document.createElement('div');
                 row.className = 'tree-row';
                 row.onclick = (e) => {{
@@ -1289,13 +1411,21 @@ class ArchitectureVisualizer:
                     const childrenEl = dirDiv.querySelector('.tree-children');
                     const arrow = row.querySelector('.tree-arrow');
                     if (childrenEl) {{
-                        childrenEl.classList.toggle('open');
+                        const opened = childrenEl.classList.toggle('open');
                         arrow.classList.toggle('open');
+                        if (opened) {{
+                            openFolders.add(comp.relative_path);
+                        }} else {{
+                            openFolders.delete(comp.relative_path);
+                        }}
+                        try {{
+                            localStorage.setItem('graf_lens_open_folders', JSON.stringify(Array.from(openFolders)));
+                        }} catch (err) {{}}
                     }}
                 }};
 
                 const arrow = document.createElement('span');
-                arrow.className = 'tree-arrow open';
+                arrow.className = 'tree-arrow' + (isOpen ? ' open' : '');
                 arrow.innerText = '▶';
 
                 const icon = document.createElement('span');
@@ -1321,7 +1451,7 @@ class ArchitectureVisualizer:
                 dirDiv.appendChild(row);
 
                 const childrenDiv = document.createElement('div');
-                childrenDiv.className = 'tree-children open';
+                childrenDiv.className = 'tree-children' + (isOpen ? ' open' : '');
                 comp.children.forEach(child => renderTree(child, childrenDiv));
                 dirDiv.appendChild(childrenDiv);
 
@@ -1470,6 +1600,9 @@ class ArchitectureVisualizer:
                 toggleBtn.style.left = (newWidth + 15) + 'px';
             }}
             if (window.network) network.redraw();
+            try {{
+                localStorage.setItem('graf_lens_sidebar_width', newWidth);
+            }} catch (e) {{}}
         }}
 
         // 7. Redimensionamento do Resizer Externo (Sidebar vs Grafo)
@@ -1527,20 +1660,37 @@ class ArchitectureVisualizer:
                 internalResizer.classList.remove('dragging');
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
+                try {{
+                    const w = parseInt(navSubpanel.style.width, 10);
+                    if (w) localStorage.setItem('graf_lens_nav_width', w);
+                }} catch (e) {{}}
             }}
         }});
+
+        // Restauração das larguras personalizadas do usuário salvas no localStorage
+        try {{
+            const savedSidebarWidth = localStorage.getItem('graf_lens_sidebar_width');
+            if (savedSidebarWidth) {{
+                updateSidebarWidth(parseInt(savedSidebarWidth, 10));
+            }}
+            const savedNavWidth = localStorage.getItem('graf_lens_nav_width');
+            if (savedNavWidth && navSubpanel) {{
+                navSubpanel.style.width = savedNavWidth + 'px';
+                navSubpanel.style.minWidth = savedNavWidth + 'px';
+            }}
+        }} catch (e) {{}}
 
         function copyCurrentCode() {{
             if (!Mediator.currentNode || !rawFileSources[Mediator.currentNode.file]) return;
             const code = rawFileSources[Mediator.currentNode.file];
             navigator.clipboard.writeText(code).then(() => {{
-                alert('Código copiado com sucesso!');
+                showToast('📋 Código copiado com sucesso!');
             }});
         }}
 
         function toggleEditMode(forceState) {{
             if (!currentLoadedFilePath) {{
-                alert('Selecione um arquivo na árvore lateral antes de editar.');
+                showToast('⚠️ Selecione um arquivo na árvore lateral antes de editar.', 'error');
                 return;
             }}
             if (typeof forceState === 'boolean') {{
@@ -1682,14 +1832,11 @@ class ArchitectureVisualizer:
                 }}
 
                 const evtSource = new EventSource('/events');
+                evtSource.addEventListener('update', () => {{
+                    fetchLiveUpdate();
+                }});
                 evtSource.addEventListener('reload', () => {{
-                    sessionStorage.setItem('lens_session_state', JSON.stringify({{
-                        nodeId: Mediator.selectedId,
-                        file: Mediator.currentNode ? Mediator.currentNode.file : null,
-                        line: Mediator.currentNode ? Mediator.currentNode.line : 1,
-                        navTab: currentNavTab
-                    }}));
-                    location.reload();
+                    fetchLiveUpdate();
                 }});
 
                 evtSource.onerror = () => {{
@@ -1788,20 +1935,17 @@ class ArchitectureVisualizer:
                 }});
                 const data = await res.json();
                 if (data.success) {{
-                    alert(actionSuccessMsg);
-                    if (location.protocol.startsWith('http')) {{
-                        setTimeout(() => location.reload(), 300);
+                    showToast(actionSuccessMsg);
+                    if (data.data) {{
+                        applyLiveUpdate(data.data);
+                    }} else {{
+                        fetchLiveUpdate();
                     }}
                 }} else {{
-                    alert('❌ Erro: ' + (data.error || 'Operação falhou'));
+                    showToast('❌ Erro: ' + (data.error || 'Operação falhou'), 'error');
                 }}
             }} catch (err) {{
-                alert(
-                    '⚠️ O servidor HTTP local do GrafLens não está respondendo.\\n\\n' +
-                    'Para realizar alterações diretamente pelo navegador com 1 clique, ' +
-                    'inicie o servidor no terminal:\\n\\n' +
-                    '👉 graf-lens-watch .'
-                );
+                showToast('⚠️ O servidor HTTP local do GrafLens não está respondendo.', 'error');
             }}
         }}
 
