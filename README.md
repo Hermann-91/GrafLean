@@ -38,7 +38,23 @@ O **GrafLens** soluciona esse gargalo operando como um **óculos de raio-X arqui
 * **Server-Sent Events (SSE):** Quando você ou a IA cria ou altera um arquivo (`.php`, `.py`, `.js`, etc.), o grafo e o editor re-escaneiam e atualizam a tela em tempo real.
 * **Preservação de Estado:** Ao recarregar, o sistema memoriza exatamente qual arquivo, linha e aba estavam ativos via `sessionStorage`.
 
-### 3. 🌐 Suporte Poliglota Nativo
+### 3. 🎯 Rastreamento Git Instantâneo (< 5ms)
+* **Status em Tempo Real:** Detecta automaticamente arquivos novos não rastreados (`??`/`A`) e modificados (`M`) via `git status --porcelain`.
+* **Destaque Visual Duplo:**
+  * **Na Árvore de Arquivos:** Badges visuais estilizados `[+ Novo]` em verde neon e `[~ Mod]` em âmbar.
+  * **No Grafo Vis.js:** Anéis de borda espessos com realce luminoso nas mesmas tonalidades semânticas.
+  * **No Inspetor:** Exibição do status de versionamento do componente ativo.
+
+### 4. 🤖 Orquestração de Agentes & Criação de Especificações
+* **Criação Rápida de Recursos:** Modal interativo integrado na UI e comando CLI dedicado (`graf-lens-new`).
+* **Templates Prontos para Agentes:**
+  * **`TASK.md`:** Objetivos, contexto de chamadores/dependências, restrições Clean Code, critérios de aceite e passos de execução.
+  * **`SPEC.md`:** Especificação arquitetural com limites, contratos de interface e invariantes.
+  * **`CONTEXT.md`:** Contexto operacional completo da stack, diretrizes e comandos essenciais.
+* **Copiar Prompt para Agente em 1 Clique:** No painel Inspetor, gere instantaneamente um prompt contextualizado com as métricas $C_a$, $C_e$, $I$, lista de chamadores e dependências para colar no terminal do seu agente autônomo.
+* **Segurança Estrita:** Proteção nativa contra ataques de *Path Traversal* (`..`).
+
+### 5. 🌐 Suporte Poliglota Nativo
 * 🐘 **PHP 8+ / Laravel:** Namespaces, Classes, Interfaces, Métodos, Chamadas `$this->service->metodo()` e Injeção de Dependências no Construtor.
 * 🐍 **Python:** Módulos, Classes, Herança, Funções, Assinaturas e Imports via AST nativo.
 * ⚛️ **JavaScript & TypeScript:** Funções, Classes, Componentes React, Hooks customizados (`use...`) e Services do Angular.
@@ -84,19 +100,23 @@ graf-lens-info NomeDaClasse [pasta_do_projeto]
 
 # 5. Escaneamento Rápido em Lote (Gera .arch_graph.json)
 graf-lens-scan [pasta_do_projeto]
+
+# 6. Criar Pastas e Especificações Markdown para Agentes
+graf-lens-new folder docs/specs
+graf-lens-new md docs/specs/TASK_CHECKOUT.md --template task
 ```
 
 ---
 
 ## 🧪 Suíte de Testes Automatizados
 
-Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (17 testes automatizados executando em menos de 70 milissegundos):
+Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (26 testes automatizados executando em menos de 200 milissegundos):
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
 ```text
-Ran 17 tests in 0.067s
+Ran 26 tests in 0.183s
 OK
 ```
 
