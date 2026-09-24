@@ -57,6 +57,7 @@ class ProjectGraph:
         git_status_map = git_tracker.get_status_map()
 
         # Indexa nós por ID (evitando duplicatas)
+        self.nodes = {}
         for node in all_nodes:
             if node.file_path in git_status_map:
                 node.git_status = git_status_map[node.file_path]
