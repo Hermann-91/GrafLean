@@ -36,6 +36,32 @@ class TestArchitectureVisualizer(unittest.TestCase):
             self.assertIn("ClassA", content)
             self.assertIn("ClassB", content)
             self.assertIn("vis-network", content)
+            self.assertIn("GrafLens", content)
+            self.assertIn("agent-modal-overlay", content)
+            self.assertIn("copyAgentPrompt", content)
+
+    def test_generates_html_with_git_status_tags(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            graph = ProjectGraph(tmp_dir)
+            node_new = Node(id="N", name="NewModule", symbol_type=SymbolType.FILE, file_path="New.py", line=1, git_status="new")
+            node_mod = Node(id="M", name="ModModule", symbol_type=SymbolType.FILE, file_path="Mod.py", line=1, git_status="modified")
+
+            graph.nodes = {"N": node_new, "M": node_mod}
+            graph.edges = []
+            graph.analyzer = ArchitectureAnalyzer([node_new, node_mod], [])
+            graph.analyzer.analyze_all()
+
+            viz = ArchitectureVisualizer(graph)
+            out_file = os.path.join(tmp_dir, "map.html")
+            path = viz.generate_html(out_file)
+
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn('"git": "new"', content)
+            self.assertIn('"git": "modified"', content)
+            self.assertIn("git-badge-new", content)
+            self.assertIn("git-badge-mod", content)
 
 
 if __name__ == "__main__":

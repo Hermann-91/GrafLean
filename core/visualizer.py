@@ -49,7 +49,8 @@ class ArchitectureVisualizer:
                 "ce": m.efferent_coupling,
                 "instability": m.instability,
                 "deep": m.is_deep_module,
-                "cycle": m.has_cycles
+                "cycle": m.has_cycles,
+                "git": node.git_status or ""
             })
 
         # 2. Prepara dados das arestas
@@ -424,6 +425,33 @@ class ArchitectureVisualizer:
             color: #a6adc8;
         }}
 
+        /* Badges de Status Git */
+        .git-badge {{
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            display: inline-block;
+            vertical-align: middle;
+            letter-spacing: 0.3px;
+        }}
+        .git-badge-new {{
+            background: rgba(166, 226, 46, 0.18);
+            color: #a6e22e;
+            border: 1px solid rgba(166, 226, 46, 0.45);
+        }}
+        .git-badge-mod {{
+            background: rgba(253, 151, 31, 0.18);
+            color: #fd971f;
+            border: 1px solid rgba(253, 151, 31, 0.45);
+        }}
+        .git-badge-del {{
+            background: rgba(249, 38, 114, 0.18);
+            color: #f92672;
+            border: 1px solid rgba(249, 38, 114, 0.45);
+        }}
+
         /* Legend */
         .legend {{
             background: rgba(24, 24, 37, 0.5);
@@ -663,12 +691,17 @@ class ArchitectureVisualizer:
         <!-- Header do Workspace -->
         <div class="workspace-header">
             <div>
-                <div class="brand-title">🏛️ Architecture Lens</div>
-                <div class="brand-sub">Workspace Integrado de Arquitetura</div>
+                <div class="brand-title">🏛️ GrafLens</div>
+                <div class="brand-sub">Workspace Integrado de Arquitetura & Orquestração</div>
             </div>
-            <button class="sublime-btn" id="btn-reopen-nav" onclick="toggleNavSubpanel()" style="display:none;" title="Mostrar Árvore/Inspetor">
-                📁 Navegador
-            </button>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <button class="sublime-btn" onclick="openAgentModal()" style="border-color:#a6e22e; color:#a6e22e; font-weight:600;" title="Criar Pasta ou Especificação Markdown para Agentes">
+                    🤖 + Criar (Agente)
+                </button>
+                <button class="sublime-btn" id="btn-reopen-nav" onclick="toggleNavSubpanel()" style="display:none;" title="Mostrar Árvore/Inspetor">
+                    📁 Navegador
+                </button>
+            </div>
         </div>
 
         <!-- Corpo Dividido: Árvore/Inspetor à esquerda + Código no centro -->
@@ -693,6 +726,8 @@ class ArchitectureVisualizer:
                         <div class="legend-item"><span class="dot" style="background:#89b4fa;"></span> Classe</div>
                         <div class="legend-item"><span class="dot" style="background:#b4befe;"></span> Interface</div>
                         <div class="legend-item"><span class="dot" style="background:#a6e3a1;"></span> Método / Função</div>
+                        <div class="legend-item"><span class="git-badge git-badge-new" style="margin:0;">+ Novo</span> Arquivo não rastreado</div>
+                        <div class="legend-item"><span class="git-badge git-badge-mod" style="margin:0;">~ Mod</span> Arquivo modificado</div>
                     </div>
 
                     <div class="tree-container" id="tree-root"></div>
@@ -706,8 +741,10 @@ class ArchitectureVisualizer:
                     <div id="inspector-content" style="display: none;">
                         <div class="card">
                             <h3 id="det-title">-</h3>
+                            <div id="det-git" style="margin-bottom:6px;"></div>
                             <p class="card-doc" id="det-doc"></p>
                             <div style="font-size: 11px; color: #89b4fa;" id="det-file">-</div>
+                            <button class="sublime-btn" style="width: 100%; justify-content: center; margin-top: 10px; background: #1e1e2e; border-color: #89b4fa; color: #89b4fa; font-weight: 600;" onclick="copyAgentPrompt()">📋 Copiar Prompt para Agente</button>
                         </div>
 
                         <div class="card">
@@ -811,12 +848,12 @@ class ArchitectureVisualizer:
         const nodes = new vis.DataSet(rawNodes.map(n => ({{
             id: n.id,
             label: n.label,
-            title: n.title,
+            title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + n.title,
             color: {{
                 background: n.type === "file" ? "#2a281e" : (colorMap[n.type] || "#cdd6f4"),
-                border: n.type === "file" ? "#f9e2af" : (n.cycle ? "#f38ba8" : (n.deep ? "#a6e3a1" : "#45475a"))
+                border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (n.type === "file" ? "#f9e2af" : (n.cycle ? "#f38ba8" : (n.deep ? "#a6e3a1" : "#45475a"))))
             }},
-            borderWidth: n.type === "file" ? 2 : (n.cycle ? 3 : 1),
+            borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (n.type === "file" ? 2 : (n.cycle ? 3 : 1)),
             size: Math.max(12, Math.min(30, 10 + n.ca * 3)),
             shape: n.type === "file" ? "box" : "dot",
             font: {{
@@ -972,6 +1009,16 @@ class ArchitectureVisualizer:
                 content.style.display = 'flex';
 
                 document.getElementById('det-title').innerText = `${{node.label}} (${{node.type.toUpperCase()}})`;
+                
+                const gitBadgeEl = document.getElementById('det-git');
+                if (node.git === 'new') {{
+                    gitBadgeEl.innerHTML = '<span class="git-badge git-badge-new">+ Arquivo Não Rastreado (Novo)</span>';
+                }} else if (node.git === 'modified') {{
+                    gitBadgeEl.innerHTML = '<span class="git-badge git-badge-mod">~ Arquivo Modificado no Git</span>';
+                }} else {{
+                    gitBadgeEl.innerHTML = '';
+                }}
+
                 document.getElementById('det-doc').innerText = node.doc ? `💡 ${{node.doc}}` : "Sem docstring registrada.";
                 document.getElementById('det-file').innerText = `${{node.file}}:${{node.line}}`;
                 document.getElementById('det-ca').innerText = node.ca;
@@ -1063,6 +1110,39 @@ class ArchitectureVisualizer:
             }}
         }};
 
+        function copyAgentPrompt() {{
+            const node = Mediator.currentNode;
+            if (!node) {{
+                alert('Selecione um arquivo ou classe para copiar o contexto.');
+                return;
+            }}
+            const callers = rawEdges.filter(e => e.target === node.id).map(e => formatConnLabel(e.source)).join(', ') || 'Nenhum chamador direto';
+            const callees = rawEdges.filter(e => e.source === node.id).map(e => formatConnLabel(e.target)).join(', ') || 'Nenhuma dependência externa';
+            
+            const promptText = `# 🤖 Contexto Arquitetural para o Agente\\n\\n` +
+                `- **Componente Alvo:** ${{node.label}} (${{node.type.toUpperCase()}})\\n` +
+                `- **Arquivo:** ${{node.file}}:${{node.line}}\\n` +
+                `- **Git Status:** ${{node.git === 'new' ? 'Novo (não rastreado)' : (node.git === 'modified' ? 'Modificado' : 'Rastreado / Inalterado')}}\\n` +
+                `- **Descrição / Doc:** ${{node.doc || 'Sem docstring registrada'}}\\n` +
+                `- **Acoplamento Aferente (Ca - Chamado por):** ${{node.ca}} [${{callers}}]\\n` +
+                `- **Acoplamento Eferente (Ce - Depende de):** ${{node.ce}} [${{callees}}]\\n` +
+                `- **Instabilidade (I = Ce / (Ca + Ce)):** ${{node.instability}}\\n\\n` +
+                `## 🎯 Diretrizes para Execução:\\n` +
+                `1. Mantenha as regras de Arquitetura Limpa, Clean Code e SOLID.\\n` +
+                `2. Não quebre os chamadores listados acima.\\n` +
+                `3. Escreva testes unitários para validar qualquer alteração.\\n`;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {{
+                navigator.clipboard.writeText(promptText).then(() => {{
+                    alert('📋 Prompt arquitetural copiado com sucesso!\\nPronto para colar no terminal do seu agente.');
+                }}).catch(() => {{
+                    window.prompt('Copie o prompt abaixo:', promptText);
+                }});
+            }} else {{
+                window.prompt('Copie o prompt abaixo:', promptText);
+            }}
+        }}
+
         // 4. Renderização da Árvore (Composite Pattern)
         function renderTree(comp, parentEl) {{
             if (comp.type === 'directory') {{
@@ -1127,6 +1207,21 @@ class ArchitectureVisualizer:
                 row.appendChild(spacer);
                 row.appendChild(icon);
                 row.appendChild(name);
+
+                if (comp.git_status) {{
+                    const gitBadge = document.createElement('span');
+                    if (comp.git_status === 'new') {{
+                        gitBadge.className = 'git-badge git-badge-new';
+                        gitBadge.innerText = '+ Novo';
+                    }} else if (comp.git_status === 'modified') {{
+                        gitBadge.className = 'git-badge git-badge-mod';
+                        gitBadge.innerText = '~ Mod';
+                    }} else if (comp.git_status === 'deleted') {{
+                        gitBadge.className = 'git-badge git-badge-del';
+                        gitBadge.innerText = '- Rem';
+                    }}
+                    row.appendChild(gitBadge);
+                }}
 
                 if (comp.symbols && comp.symbols.length > 0) {{
                     const badge = document.createElement('span');
@@ -1368,7 +1463,182 @@ class ArchitectureVisualizer:
             }}
         }}
         initLiveReload();
+
+        // 11. Modal de Criação de Recursos para Agentes
+        let currentModalTab = 'md';
+
+        function openAgentModal() {{
+            const modal = document.getElementById('agent-modal-overlay');
+            const filePathInput = document.getElementById('modal-file-path');
+            const folderPathInput = document.getElementById('modal-folder-path');
+            const errBox = document.getElementById('modal-error-msg');
+            const okBox = document.getElementById('modal-success-msg');
+
+            errBox.style.display = 'none';
+            okBox.style.display = 'none';
+            folderPathInput.value = '';
+
+            // Se um nó estiver selecionado, sugere nome de arquivo contextualizado
+            if (Mediator.currentNode) {{
+                const cleanName = Mediator.currentNode.label.replace(/[^a-zA-Z0-9_-]/g, '_');
+                filePathInput.value = `docs/specs/TASK_${{cleanName}}.md`;
+            }} else {{
+                filePathInput.value = 'docs/specs/TASK_ORCHESTRATION.md';
+            }}
+
+            switchModalTab('md');
+            modal.style.display = 'flex';
+        }}
+
+        function closeAgentModal() {{
+            document.getElementById('agent-modal-overlay').style.display = 'none';
+        }}
+
+        function switchModalTab(tab) {{
+            currentModalTab = tab;
+            document.getElementById('modal-tab-md').classList.toggle('active', tab === 'md');
+            document.getElementById('modal-tab-folder').classList.toggle('active', tab === 'folder');
+            document.getElementById('modal-pane-md').style.display = tab === 'md' ? 'flex' : 'none';
+            document.getElementById('modal-pane-folder').style.display = tab === 'folder' ? 'flex' : 'none';
+            document.getElementById('modal-error-msg').style.display = 'none';
+            document.getElementById('modal-success-msg').style.display = 'none';
+        }}
+
+        async function submitAgentModal() {{
+            const errBox = document.getElementById('modal-error-msg');
+            const okBox = document.getElementById('modal-success-msg');
+            errBox.style.display = 'none';
+            okBox.style.display = 'none';
+
+            const isHttp = location.protocol.startsWith('http');
+
+            if (currentModalTab === 'folder') {{
+                const folderPath = document.getElementById('modal-folder-path').value.trim();
+                if (!folderPath) {{
+                    errBox.innerText = 'Por favor, informe o caminho da pasta.';
+                    errBox.style.display = 'block';
+                    return;
+                }}
+
+                if (isHttp) {{
+                    try {{
+                        const res = await fetch('/api/create-folder', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{ path: folderPath }})
+                        }});
+                        const data = await res.json();
+                        if (data.success) {{
+                            okBox.innerText = `✅ Pasta criada com sucesso: ${{data.created}}`;
+                            okBox.style.display = 'block';
+                            setTimeout(closeAgentModal, 1000);
+                        }} else {{
+                            errBox.innerText = `❌ Erro: ${{data.error || 'Falha ao criar pasta'}}`;
+                            errBox.style.display = 'block';
+                        }}
+                    }} catch (e) {{
+                        errBox.innerText = `❌ Erro de comunicação: ${{e.message}}`;
+                        errBox.style.display = 'block';
+                    }}
+                }} else {{
+                    const cmd = `graf-lens-new folder "${{folderPath}}"`;
+                    navigator.clipboard.writeText(cmd).then(() => {{
+                        okBox.innerHTML = `📋 Modo estático: comando copiado para o terminal:<br><code>${{cmd}}</code>`;
+                        okBox.style.display = 'block';
+                    }});
+                }}
+            }} else {{
+                const filePath = document.getElementById('modal-file-path').value.trim();
+                const template = document.getElementById('modal-select-template').value;
+                if (!filePath) {{
+                    errBox.innerText = 'Por favor, informe o caminho do arquivo Markdown.';
+                    errBox.style.display = 'block';
+                    return;
+                }}
+
+                const contextData = {{}};
+                if (Mediator.currentNode) {{
+                    contextData.target = `${{Mediator.currentNode.label}} (${{Mediator.currentNode.type}})`;
+                    contextData.inbound = rawEdges.filter(e => e.target === Mediator.currentNode.id).map(e => formatConnLabel(e.source)).join(', ') || 'Nenhum';
+                    contextData.outbound = rawEdges.filter(e => e.source === Mediator.currentNode.id).map(e => formatConnLabel(e.target)).join(', ') || 'Nenhuma';
+                }}
+
+                if (isHttp) {{
+                    try {{
+                        const res = await fetch('/api/create-file', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{
+                                path: filePath,
+                                template: template,
+                                context: contextData
+                            }})
+                        }});
+                        const data = await res.json();
+                        if (data.success) {{
+                            okBox.innerText = `✅ Arquivo criado com sucesso: ${{data.created}}`;
+                            okBox.style.display = 'block';
+                            setTimeout(closeAgentModal, 1000);
+                        }} else {{
+                            errBox.innerText = `❌ Erro: ${{data.error || 'Falha ao criar arquivo'}}`;
+                            errBox.style.display = 'block';
+                        }}
+                    }} catch (e) {{
+                        errBox.innerText = `❌ Erro de comunicação: ${{e.message}}`;
+                        errBox.style.display = 'block';
+                    }}
+                }} else {{
+                    const cmd = `graf-lens-new md "${{filePath}}" --template ${{template}}`;
+                    navigator.clipboard.writeText(cmd).then(() => {{
+                        okBox.innerHTML = `📋 Modo estático: comando copiado para o terminal:<br><code>${{cmd}}</code>`;
+                        okBox.style.display = 'block';
+                    }});
+                }}
+            }}
+        }}
     </script>
+
+    <!-- Modal de Criação de Recursos para Agentes -->
+    <div id="agent-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); backdrop-filter:blur(4px); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:#181825; border:1px solid #45475a; border-radius:10px; width:490px; max-width:92vw; box-shadow:0 16px 40px rgba(0,0,0,0.6); overflow:hidden; display:flex; flex-direction:column;">
+            <div style="padding:14px 18px; border-bottom:1px solid #313244; display:flex; justify-content:space-between; align-items:center; background:#11111b;">
+                <span style="font-weight:700; color:#89b4fa; font-size:14px;">🤖 Criar Recurso para Agentes</span>
+                <button onclick="closeAgentModal()" style="background:transparent; border:none; color:#a6adc8; font-size:16px; cursor:pointer;" title="Fechar">✕</button>
+            </div>
+            <div style="padding:16px 18px; display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; gap:8px;">
+                    <button class="nav-tab-btn active" id="modal-tab-md" onclick="switchModalTab('md')">📄 Especificação (.md)</button>
+                    <button class="nav-tab-btn" id="modal-tab-folder" onclick="switchModalTab('folder')">📁 Nova Pasta</button>
+                </div>
+                
+                <div id="modal-pane-md" style="display:flex; flex-direction:column; gap:10px;">
+                    <label style="font-size:12px; color:#a6adc8;">Template de Orquestração:</label>
+                    <select id="modal-select-template" style="background:#11111b; border:1px solid #45475a; color:#cdd6f4; padding:8px; border-radius:6px; font-size:12px; outline:none;">
+                        <option value="task">📋 Tarefa do Agente (TASK.md)</option>
+                        <option value="spec">🏛️ Especificação Arquitetural (SPEC.md)</option>
+                        <option value="context">🧠 Contexto Operacional (CONTEXT.md)</option>
+                        <option value="empty">📝 Documento Vazio</option>
+                    </select>
+                    <label style="font-size:12px; color:#a6adc8;">Caminho Relativo do Arquivo (.md):</label>
+                    <input type="text" id="modal-file-path" placeholder="Ex: docs/specs/TASK_AUTH.md" style="background:#11111b; border:1px solid #45475a; color:#cdd6f4; padding:8px 10px; border-radius:6px; font-size:12px; outline:none;">
+                    <div style="font-size:11px; color:#6c7086;" id="modal-md-help">Será criado com os dados arquiteturais do nó ativo vinculados ao template.</div>
+                </div>
+
+                <div id="modal-pane-folder" style="display:none; flex-direction:column; gap:10px;">
+                    <label style="font-size:12px; color:#a6adc8;">Caminho Relativo da Pasta:</label>
+                    <input type="text" id="modal-folder-path" placeholder="Ex: docs/specs ou src/modules/auth" style="background:#11111b; border:1px solid #45475a; color:#cdd6f4; padding:8px 10px; border-radius:6px; font-size:12px; outline:none;">
+                    <div style="font-size:11px; color:#6c7086;">Cria a pasta com segurança no projeto (proteção contra path traversal).</div>
+                </div>
+
+                <div id="modal-error-msg" style="display:none; color:#f38ba8; font-size:12px; background:rgba(243,139,168,0.15); padding:8px 10px; border-radius:6px; border:1px solid rgba(243,139,168,0.3);"></div>
+                <div id="modal-success-msg" style="display:none; color:#a6e22e; font-size:12px; background:rgba(166,226,46,0.15); padding:8px 10px; border-radius:6px; border:1px solid rgba(166,226,46,0.3);"></div>
+            </div>
+            <div style="padding:12px 18px; border-top:1px solid #313244; display:flex; justify-content:flex-end; gap:8px; background:#11111b;">
+                <button class="sublime-btn" onclick="closeAgentModal()">Cancelar</button>
+                <button class="sublime-btn" id="modal-btn-submit" onclick="submitAgentModal()" style="background:#a6e22e; color:#1e1e1e; font-weight:700; border-color:#a6e22e;">Criar Recurso</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 """
