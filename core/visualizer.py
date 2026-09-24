@@ -452,6 +452,104 @@ class ArchitectureVisualizer:
             border: 1px solid rgba(249, 38, 114, 0.45);
         }}
 
+        /* Botões de Ações na Árvore */
+        .tree-add-btn {{
+            margin-left: auto;
+            background: transparent;
+            border: 1px solid rgba(166, 226, 46, 0.4);
+            color: #a6e22e;
+            border-radius: 50%;
+            width: 17px;
+            height: 17px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.15s ease;
+            line-height: 1;
+            padding: 0;
+            flex-shrink: 0;
+        }}
+        .tree-row:hover .tree-add-btn {{
+            opacity: 1;
+        }}
+        .tree-add-btn:hover {{
+            background: #a6e22e;
+            color: #1e1e1e;
+            box-shadow: 0 0 6px rgba(166, 226, 46, 0.8);
+            transform: scale(1.15);
+        }}
+        .tree-more-btn {{
+            margin-left: auto;
+            background: transparent;
+            border: none;
+            color: #6c7086;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0 4px;
+            opacity: 0;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }}
+        .tree-row:hover .tree-more-btn {{
+            opacity: 1;
+        }}
+        .tree-more-btn:hover {{
+            color: #89b4fa;
+            transform: scale(1.2);
+        }}
+
+        /* Menu de Contexto Flutuante */
+        .tree-context-menu {{
+            position: fixed;
+            z-index: 99999;
+            background: #181825;
+            border: 1px solid #45475a;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            padding: 6px;
+            min-width: 170px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }}
+        .tree-context-header {{
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #89b4fa;
+            padding: 4px 8px 6px;
+            border-bottom: 1px solid #313244;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+        }}
+        .tree-context-item {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            border: none;
+            color: #cdd6f4;
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s ease, color 0.15s ease;
+        }}
+        .tree-context-item:hover {{
+            background: rgba(137, 180, 250, 0.2);
+            color: #89b4fa;
+        }}
+        .tree-context-item.danger:hover {{
+            background: rgba(249, 38, 114, 0.2);
+            color: #f92672;
+        }}
+
         /* Legend */
         .legend {{
             background: rgba(24, 24, 37, 0.5);
@@ -695,9 +793,6 @@ class ArchitectureVisualizer:
                 <div class="brand-sub">Workspace Integrado de Arquitetura & Orquestração</div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
-                <button class="sublime-btn" onclick="openAgentModal()" style="border-color:#a6e22e; color:#a6e22e; font-weight:600;" title="Criar Pasta ou Especificação Markdown para Agentes">
-                    🤖 + Criar (Agente)
-                </button>
                 <button class="sublime-btn" id="btn-reopen-nav" onclick="toggleNavSubpanel()" style="display:none;" title="Mostrar Árvore/Inspetor">
                     📁 Navegador
                 </button>
@@ -1174,6 +1269,17 @@ class ArchitectureVisualizer:
                 row.appendChild(arrow);
                 row.appendChild(icon);
                 row.appendChild(name);
+
+                const dirActionsBtn = document.createElement('button');
+                dirActionsBtn.className = 'tree-add-btn';
+                dirActionsBtn.title = `Criar ou gerenciar em "${{comp.name}}"`;
+                dirActionsBtn.innerText = '+';
+                dirActionsBtn.onclick = (e) => {{
+                    e.stopPropagation();
+                    openTreeContextMenu(e, 'directory', comp.relative_path, comp.name);
+                }};
+                row.appendChild(dirActionsBtn);
+
                 dirDiv.appendChild(row);
 
                 const childrenDiv = document.createElement('div');
@@ -1229,6 +1335,17 @@ class ArchitectureVisualizer:
                     badge.innerText = comp.symbols.length;
                     row.appendChild(badge);
                 }}
+
+                const fileActionsBtn = document.createElement('button');
+                fileActionsBtn.className = 'tree-more-btn';
+                fileActionsBtn.title = `Ações em "${{comp.name}}" (Renomear, Excluir)`;
+                fileActionsBtn.innerText = '⋮';
+                fileActionsBtn.onclick = (e) => {{
+                    e.stopPropagation();
+                    openTreeContextMenu(e, 'file', comp.relative_path, comp.name);
+                }};
+                row.appendChild(fileActionsBtn);
+
                 fileDiv.appendChild(row);
 
                 if (comp.symbols && comp.symbols.length > 0) {{
@@ -1464,181 +1581,147 @@ class ArchitectureVisualizer:
         }}
         initLiveReload();
 
-        // 11. Modal de Criação de Recursos para Agentes
-        let currentModalTab = 'md';
+        // 11. Menu de Contexto da Árvore (Criar Pasta/MD, Renomear, Excluir)
+        let activeContextType = null;
+        let activeContextPath = null;
+        let activeContextName = null;
 
-        function openAgentModal() {{
-            const modal = document.getElementById('agent-modal-overlay');
-            const filePathInput = document.getElementById('modal-file-path');
-            const folderPathInput = document.getElementById('modal-folder-path');
-            const errBox = document.getElementById('modal-error-msg');
-            const okBox = document.getElementById('modal-success-msg');
+        function openTreeContextMenu(e, type, relPath, name) {{
+            activeContextType = type;
+            activeContextPath = relPath || '';
+            activeContextName = name;
 
-            errBox.style.display = 'none';
-            okBox.style.display = 'none';
-            folderPathInput.value = '';
+            const menu = document.getElementById('tree-context-menu');
+            menu.innerHTML = '';
 
-            // Se um nó estiver selecionado, sugere nome de arquivo contextualizado
-            if (Mediator.currentNode) {{
-                const cleanName = Mediator.currentNode.label.replace(/[^a-zA-Z0-9_-]/g, '_');
-                filePathInput.value = `docs/specs/TASK_${{cleanName}}.md`;
+            const header = document.createElement('div');
+            header.className = 'tree-context-header';
+            header.innerText = (type === 'directory' ? '📁 ' : '📄 ') + name;
+            menu.appendChild(header);
+
+            if (type === 'directory') {{
+                const btnNewFolder = document.createElement('button');
+                btnNewFolder.className = 'tree-context-item';
+                btnNewFolder.innerHTML = '<span>📁</span> Criar pasta';
+                btnNewFolder.onclick = () => promptCreateFolder(activeContextPath);
+                menu.appendChild(btnNewFolder);
+
+                const btnNewMd = document.createElement('button');
+                btnNewMd.className = 'tree-context-item';
+                btnNewMd.innerHTML = '<span>📄</span> Criar arquivo .md';
+                btnNewMd.onclick = () => promptCreateMarkdown(activeContextPath);
+                menu.appendChild(btnNewMd);
+
+                const btnRename = document.createElement('button');
+                btnRename.className = 'tree-context-item';
+                btnRename.innerHTML = '<span>✏️</span> Renomear pasta';
+                btnRename.onclick = () => promptRename(activeContextPath, activeContextName);
+                menu.appendChild(btnRename);
+
+                const btnDelete = document.createElement('button');
+                btnDelete.className = 'tree-context-item danger';
+                btnDelete.innerHTML = '<span>🗑️</span> Excluir pasta';
+                btnDelete.onclick = () => promptDelete(activeContextPath, activeContextName, true);
+                menu.appendChild(btnDelete);
             }} else {{
-                filePathInput.value = 'docs/specs/TASK_ORCHESTRATION.md';
+                const btnRename = document.createElement('button');
+                btnRename.className = 'tree-context-item';
+                btnRename.innerHTML = '<span>✏️</span> Renomear arquivo';
+                btnRename.onclick = () => promptRename(activeContextPath, activeContextName);
+                menu.appendChild(btnRename);
+
+                const btnDelete = document.createElement('button');
+                btnDelete.className = 'tree-context-item danger';
+                btnDelete.innerHTML = '<span>🗑️</span> Excluir arquivo';
+                btnDelete.onclick = () => promptDelete(activeContextPath, activeContextName, false);
+                menu.appendChild(btnDelete);
             }}
 
-            switchModalTab('md');
-            modal.style.display = 'flex';
+            const posX = Math.min(e.clientX + 10, window.innerWidth - 190);
+            const posY = Math.min(e.clientY + 5, window.innerHeight - 200);
+            menu.style.left = posX + 'px';
+            menu.style.top = posY + 'px';
+            menu.style.display = 'flex';
         }}
 
-        function closeAgentModal() {{
-            document.getElementById('agent-modal-overlay').style.display = 'none';
+        function closeTreeContextMenu() {{
+            const menu = document.getElementById('tree-context-menu');
+            if (menu) menu.style.display = 'none';
         }}
 
-        function switchModalTab(tab) {{
-            currentModalTab = tab;
-            document.getElementById('modal-tab-md').classList.toggle('active', tab === 'md');
-            document.getElementById('modal-tab-folder').classList.toggle('active', tab === 'folder');
-            document.getElementById('modal-pane-md').style.display = tab === 'md' ? 'flex' : 'none';
-            document.getElementById('modal-pane-folder').style.display = tab === 'folder' ? 'flex' : 'none';
-            document.getElementById('modal-error-msg').style.display = 'none';
-            document.getElementById('modal-success-msg').style.display = 'none';
-        }}
-
-        async function submitAgentModal() {{
-            const errBox = document.getElementById('modal-error-msg');
-            const okBox = document.getElementById('modal-success-msg');
-            errBox.style.display = 'none';
-            okBox.style.display = 'none';
-
-            const isHttp = location.protocol.startsWith('http');
-
-            if (currentModalTab === 'folder') {{
-                const folderPath = document.getElementById('modal-folder-path').value.trim();
-                if (!folderPath) {{
-                    errBox.innerText = 'Por favor, informe o caminho da pasta.';
-                    errBox.style.display = 'block';
-                    return;
-                }}
-
-                if (isHttp) {{
-                    try {{
-                        const res = await fetch('/api/create-folder', {{
-                            method: 'POST',
-                            headers: {{ 'Content-Type': 'application/json' }},
-                            body: JSON.stringify({{ path: folderPath }})
-                        }});
-                        const data = await res.json();
-                        if (data.success) {{
-                            okBox.innerText = `✅ Pasta criada com sucesso: ${{data.created}}`;
-                            okBox.style.display = 'block';
-                            setTimeout(closeAgentModal, 1000);
-                        }} else {{
-                            errBox.innerText = `❌ Erro: ${{data.error || 'Falha ao criar pasta'}}`;
-                            errBox.style.display = 'block';
-                        }}
-                    }} catch (e) {{
-                        errBox.innerText = `❌ Erro de comunicação: ${{e.message}}`;
-                        errBox.style.display = 'block';
-                    }}
-                }} else {{
-                    const cmd = `graf-lens-new folder "${{folderPath}}"`;
-                    navigator.clipboard.writeText(cmd).then(() => {{
-                        okBox.innerHTML = `📋 Modo estático: comando copiado para o terminal:<br><code>${{cmd}}</code>`;
-                        okBox.style.display = 'block';
-                    }});
-                }}
-            }} else {{
-                const filePath = document.getElementById('modal-file-path').value.trim();
-                const template = document.getElementById('modal-select-template').value;
-                if (!filePath) {{
-                    errBox.innerText = 'Por favor, informe o caminho do arquivo Markdown.';
-                    errBox.style.display = 'block';
-                    return;
-                }}
-
-                const contextData = {{}};
-                if (Mediator.currentNode) {{
-                    contextData.target = `${{Mediator.currentNode.label}} (${{Mediator.currentNode.type}})`;
-                    contextData.inbound = rawEdges.filter(e => e.target === Mediator.currentNode.id).map(e => formatConnLabel(e.source)).join(', ') || 'Nenhum';
-                    contextData.outbound = rawEdges.filter(e => e.source === Mediator.currentNode.id).map(e => formatConnLabel(e.target)).join(', ') || 'Nenhuma';
-                }}
-
-                if (isHttp) {{
-                    try {{
-                        const res = await fetch('/api/create-file', {{
-                            method: 'POST',
-                            headers: {{ 'Content-Type': 'application/json' }},
-                            body: JSON.stringify({{
-                                path: filePath,
-                                template: template,
-                                context: contextData
-                            }})
-                        }});
-                        const data = await res.json();
-                        if (data.success) {{
-                            okBox.innerText = `✅ Arquivo criado com sucesso: ${{data.created}}`;
-                            okBox.style.display = 'block';
-                            setTimeout(closeAgentModal, 1000);
-                        }} else {{
-                            errBox.innerText = `❌ Erro: ${{data.error || 'Falha ao criar arquivo'}}`;
-                            errBox.style.display = 'block';
-                        }}
-                    }} catch (e) {{
-                        errBox.innerText = `❌ Erro de comunicação: ${{e.message}}`;
-                        errBox.style.display = 'block';
-                    }}
-                }} else {{
-                    const cmd = `graf-lens-new md "${{filePath}}" --template ${{template}}`;
-                    navigator.clipboard.writeText(cmd).then(() => {{
-                        okBox.innerHTML = `📋 Modo estático: comando copiado para o terminal:<br><code>${{cmd}}</code>`;
-                        okBox.style.display = 'block';
-                    }});
-                }}
+        document.addEventListener('click', (e) => {{
+            if (!e.target.closest('#tree-context-menu')) {{
+                closeTreeContextMenu();
             }}
+        }});
+
+        async function executeBackendApi(endpoint, payload, actionSuccessMsg) {{
+            const baseUrl = location.protocol.startsWith('http') ? '' : 'http://127.0.0.1:7357';
+            try {{
+                const res = await fetch(baseUrl + endpoint, {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(payload)
+                }});
+                const data = await res.json();
+                if (data.success) {{
+                    alert(actionSuccessMsg);
+                    if (location.protocol.startsWith('http')) {{
+                        setTimeout(() => location.reload(), 300);
+                    }}
+                }} else {{
+                    alert('❌ Erro: ' + (data.error || 'Operação falhou'));
+                }}
+            }} catch (err) {{
+                alert(
+                    '⚠️ O servidor HTTP local do GrafLens não está respondendo.\\n\\n' +
+                    'Para realizar alterações diretamente pelo navegador com 1 clique, ' +
+                    'inicie o servidor no terminal:\\n\\n' +
+                    '👉 graf-lens-watch .'
+                );
+            }}
+        }}
+
+        async function promptCreateFolder(parentRelPath) {{
+            closeTreeContextMenu();
+            const targetDesc = parentRelPath || 'raiz do projeto';
+            const folderName = window.prompt(`Criar nova pasta dentro de "${{targetDesc}}":`);
+            if (!folderName || !folderName.trim()) return;
+
+            const finalRelPath = parentRelPath ? `${{parentRelPath}}/${{folderName.trim()}}` : folderName.trim();
+            await executeBackendApi('/api/create-folder', {{ path: finalRelPath }}, `✅ Pasta "${{folderName.trim()}}" criada com sucesso!`);
+        }}
+
+        async function promptCreateMarkdown(parentRelPath) {{
+            closeTreeContextMenu();
+            const targetDesc = parentRelPath || 'raiz do projeto';
+            let fileName = window.prompt(`Criar arquivo Markdown (.md) em "${{targetDesc}}":`, 'TASK.md');
+            if (!fileName || !fileName.trim()) return;
+            if (!fileName.endsWith('.md')) fileName += '.md';
+
+            const finalRelPath = parentRelPath ? `${{parentRelPath}}/${{fileName.trim()}}` : fileName.trim();
+            await executeBackendApi('/api/create-file', {{ path: finalRelPath, template: 'task' }}, `✅ Arquivo "${{fileName.trim()}}" criado com sucesso!`);
+        }}
+
+        async function promptRename(relPath, currentName) {{
+            closeTreeContextMenu();
+            const newName = window.prompt(`Renomear "${{currentName}}" para:`, currentName);
+            if (!newName || !newName.trim() || newName.trim() === currentName) return;
+
+            await executeBackendApi('/api/rename', {{ old_path: relPath, new_name: newName.trim() }}, `✅ Renomeado para "${{newName.trim()}}"!`);
+        }}
+
+        async function promptDelete(relPath, currentName, isDir) {{
+            closeTreeContextMenu();
+            const confirmMsg = `⚠️ ATENÇÃO: Deseja realmente excluir permanentemente ${{isDir ? 'a pasta' : 'o arquivo'}} "${{currentName}}"?\\n\\nEsta ação não poderá ser desfeita.`;
+            if (!window.confirm(confirmMsg)) return;
+
+            await executeBackendApi('/api/delete', {{ path: relPath }}, `🗑️ "${{currentName}}" foi excluído com sucesso!`);
         }}
     </script>
 
-    <!-- Modal de Criação de Recursos para Agentes -->
-    <div id="agent-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.78); backdrop-filter:blur(4px); z-index:9999; justify-content:center; align-items:center;">
-        <div style="background:#181825; border:1px solid #45475a; border-radius:10px; width:490px; max-width:92vw; box-shadow:0 16px 40px rgba(0,0,0,0.6); overflow:hidden; display:flex; flex-direction:column;">
-            <div style="padding:14px 18px; border-bottom:1px solid #313244; display:flex; justify-content:space-between; align-items:center; background:#11111b;">
-                <span style="font-weight:700; color:#89b4fa; font-size:14px;">🤖 Criar Recurso para Agentes</span>
-                <button onclick="closeAgentModal()" style="background:transparent; border:none; color:#a6adc8; font-size:16px; cursor:pointer;" title="Fechar">✕</button>
-            </div>
-            <div style="padding:16px 18px; display:flex; flex-direction:column; gap:12px;">
-                <div style="display:flex; gap:8px;">
-                    <button class="nav-tab-btn active" id="modal-tab-md" onclick="switchModalTab('md')">📄 Especificação (.md)</button>
-                    <button class="nav-tab-btn" id="modal-tab-folder" onclick="switchModalTab('folder')">📁 Nova Pasta</button>
-                </div>
-                
-                <div id="modal-pane-md" style="display:flex; flex-direction:column; gap:10px;">
-                    <label style="font-size:12px; color:#a6adc8;">Template de Orquestração:</label>
-                    <select id="modal-select-template" style="background:#11111b; border:1px solid #45475a; color:#cdd6f4; padding:8px; border-radius:6px; font-size:12px; outline:none;">
-                        <option value="task">📋 Tarefa do Agente (TASK.md)</option>
-                        <option value="spec">🏛️ Especificação Arquitetural (SPEC.md)</option>
-                        <option value="context">🧠 Contexto Operacional (CONTEXT.md)</option>
-                        <option value="empty">📝 Documento Vazio</option>
-                    </select>
-                    <label style="font-size:12px; color:#a6adc8;">Caminho Relativo do Arquivo (.md):</label>
-                    <input type="text" id="modal-file-path" placeholder="Ex: docs/specs/TASK_AUTH.md" style="background:#11111b; border:1px solid #45475a; color:#cdd6f4; padding:8px 10px; border-radius:6px; font-size:12px; outline:none;">
-                    <div style="font-size:11px; color:#6c7086;" id="modal-md-help">Será criado com os dados arquiteturais do nó ativo vinculados ao template.</div>
-                </div>
-
-                <div id="modal-pane-folder" style="display:none; flex-direction:column; gap:10px;">
-                    <label style="font-size:12px; color:#a6adc8;">Caminho Relativo da Pasta:</label>
-                    <input type="text" id="modal-folder-path" placeholder="Ex: docs/specs ou src/modules/auth" style="background:#11111b; border:1px solid #45475a; color:#cdd6f4; padding:8px 10px; border-radius:6px; font-size:12px; outline:none;">
-                    <div style="font-size:11px; color:#6c7086;">Cria a pasta com segurança no projeto (proteção contra path traversal).</div>
-                </div>
-
-                <div id="modal-error-msg" style="display:none; color:#f38ba8; font-size:12px; background:rgba(243,139,168,0.15); padding:8px 10px; border-radius:6px; border:1px solid rgba(243,139,168,0.3);"></div>
-                <div id="modal-success-msg" style="display:none; color:#a6e22e; font-size:12px; background:rgba(166,226,46,0.15); padding:8px 10px; border-radius:6px; border:1px solid rgba(166,226,46,0.3);"></div>
-            </div>
-            <div style="padding:12px 18px; border-top:1px solid #313244; display:flex; justify-content:flex-end; gap:8px; background:#11111b;">
-                <button class="sublime-btn" onclick="closeAgentModal()">Cancelar</button>
-                <button class="sublime-btn" id="modal-btn-submit" onclick="submitAgentModal()" style="background:#a6e22e; color:#1e1e1e; font-weight:700; border-color:#a6e22e;">Criar Recurso</button>
-            </div>
-        </div>
-    </div>
+    <!-- Menu Flutuante Contextual para Pastas e Arquivos -->
+    <div id="tree-context-menu" class="tree-context-menu" style="display:none;"></div>
 </body>
 </html>
 """

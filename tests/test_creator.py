@@ -8,7 +8,10 @@ import os
 import shutil
 import tempfile
 import unittest
-from core.creator import create_folder, create_markdown_spec, is_safe_path, TEMPLATES
+from core.creator import (
+    create_folder, create_markdown_spec, is_safe_path,
+    rename_resource, delete_resource, TEMPLATES
+)
 
 
 class TestProjectCreator(unittest.TestCase):
@@ -67,6 +70,37 @@ class TestProjectCreator(unittest.TestCase):
     def test_create_markdown_traversal_rejection(self):
         with self.assertRaises(ValueError):
             create_markdown_spec(self.test_dir, "../../evil.md")
+
+    def test_rename_resource_success(self):
+        old_file = create_markdown_spec(self.test_dir, "docs/OLD.md")
+        self.assertTrue(os.path.isfile(old_file))
+
+        new_file = rename_resource(self.test_dir, "docs/OLD.md", "NEW.md")
+        self.assertFalse(os.path.exists(old_file))
+        self.assertTrue(os.path.isfile(new_file))
+        self.assertTrue(new_file.endswith("NEW.md"))
+
+    def test_rename_resource_traversal_rejection(self):
+        create_markdown_spec(self.test_dir, "docs/OLD.md")
+        with self.assertRaises(ValueError):
+            rename_resource(self.test_dir, "docs/OLD.md", "../../evil.md")
+
+    def test_delete_resource_file_and_directory(self):
+        file_path = create_markdown_spec(self.test_dir, "to_delete/TEST.md")
+        self.assertTrue(os.path.isfile(file_path))
+
+        delete_resource(self.test_dir, "to_delete/TEST.md")
+        self.assertFalse(os.path.exists(file_path))
+
+        self.assertTrue(os.path.isdir(os.path.join(self.test_dir, "to_delete")))
+        delete_resource(self.test_dir, "to_delete")
+        self.assertFalse(os.path.exists(os.path.join(self.test_dir, "to_delete")))
+
+    def test_delete_resource_root_protection(self):
+        with self.assertRaises(ValueError):
+            delete_resource(self.test_dir, ".")
+        with self.assertRaises(ValueError):
+            delete_resource(self.test_dir, "")
 
 
 if __name__ == "__main__":

@@ -37,7 +37,8 @@ class TestArchitectureVisualizer(unittest.TestCase):
             self.assertIn("ClassB", content)
             self.assertIn("vis-network", content)
             self.assertIn("GrafLens", content)
-            self.assertIn("agent-modal-overlay", content)
+            self.assertIn("tree-context-menu", content)
+            self.assertIn("openTreeContextMenu", content)
             self.assertIn("copyAgentPrompt", content)
 
     def test_generates_html_with_git_status_tags(self):

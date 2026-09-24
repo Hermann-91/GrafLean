@@ -141,3 +141,55 @@ def create_markdown_spec(
         f.write(content)
 
     return full_path
+
+
+def rename_resource(base_dir: str, old_relative_path: str, new_name_or_rel_path: str) -> str:
+    """
+    Renomeia um arquivo ou pasta dentro do diretório base do projeto com segurança.
+    Retorna o novo caminho absoluto.
+    """
+    if not is_safe_path(base_dir, old_relative_path):
+        raise ValueError(f"Caminho inseguro detectado (Path Traversal): {old_relative_path}")
+
+    old_full = os.path.abspath(os.path.join(base_dir, old_relative_path))
+    if not os.path.exists(old_full):
+        raise FileNotFoundError(f"Arquivo ou pasta não encontrado: {old_relative_path}")
+
+    if os.sep not in new_name_or_rel_path and "/" not in new_name_or_rel_path:
+        new_full = os.path.join(os.path.dirname(old_full), new_name_or_rel_path)
+    else:
+        new_full = os.path.abspath(os.path.join(base_dir, new_name_or_rel_path))
+
+    if not is_safe_path(base_dir, os.path.relpath(new_full, base_dir)):
+        raise ValueError(f"Novo caminho inseguro detectado: {new_name_or_rel_path}")
+
+    if os.path.exists(new_full):
+        raise FileExistsError(f"Já existe um arquivo ou pasta com este nome: {new_name_or_rel_path}")
+
+    os.rename(old_full, new_full)
+    return new_full
+
+
+def delete_resource(base_dir: str, relative_path: str) -> str:
+    """
+    Exclui um arquivo ou diretório com segurança dentro do projeto.
+    Impede a exclusão do diretório raiz.
+    Retorna o caminho absoluto do recurso excluído.
+    """
+    if not relative_path or relative_path.strip() in (".", "/", "\\", ""):
+        raise ValueError("Operação bloqueada: não é permitido excluir o diretório raiz do projeto.")
+
+    if not is_safe_path(base_dir, relative_path):
+        raise ValueError(f"Caminho inseguro detectado (Path Traversal): {relative_path}")
+
+    full_path = os.path.abspath(os.path.join(base_dir, relative_path))
+    if not os.path.exists(full_path):
+        raise FileNotFoundError(f"Arquivo ou pasta não encontrado: {relative_path}")
+
+    if os.path.isdir(full_path):
+        import shutil
+        shutil.rmtree(full_path)
+    else:
+        os.remove(full_path)
+
+    return full_path

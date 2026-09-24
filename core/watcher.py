@@ -147,7 +147,7 @@ class ArchitectureWatcher:
                     print(f"⚠️ [Watch] Erro ao re-escanear: {e}")
 
     def _start_server(self):
-        from core.creator import create_folder, create_markdown_spec, TEMPLATES
+        from core.creator import create_folder, create_markdown_spec, rename_resource, delete_resource, TEMPLATES
         watcher = self
 
         class WatcherHandler(BaseHTTPRequestHandler):
@@ -256,6 +256,31 @@ class ArchitectureWatcher:
                         )
                         rel_created = os.path.relpath(created, watcher.target_dir)
                         return self._send_json(200, {"success": True, "created": rel_created})
+                    except Exception as e:
+                        return self._send_json(400, {"success": False, "error": str(e)})
+
+                elif self.path == "/api/rename":
+                    old_path = payload.get("old_path", "").strip()
+                    new_name = payload.get("new_name", "").strip()
+                    if not old_path or not new_name:
+                        return self._send_json(400, {"success": False, "error": "Caminhos original e novo são obrigatórios."})
+                    try:
+                        from core.creator import rename_resource
+                        renamed = rename_resource(watcher.target_dir, old_path, new_name)
+                        rel_renamed = os.path.relpath(renamed, watcher.target_dir)
+                        return self._send_json(200, {"success": True, "renamed": rel_renamed})
+                    except Exception as e:
+                        return self._send_json(400, {"success": False, "error": str(e)})
+
+                elif self.path == "/api/delete":
+                    target_path = payload.get("path", "").strip()
+                    if not target_path:
+                        return self._send_json(400, {"success": False, "error": "Caminho do recurso é obrigatório."})
+                    try:
+                        from core.creator import delete_resource
+                        deleted = delete_resource(watcher.target_dir, target_path)
+                        rel_deleted = os.path.relpath(deleted, watcher.target_dir)
+                        return self._send_json(200, {"success": True, "deleted": rel_deleted})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
 

@@ -28,6 +28,8 @@ Uso:
   python3 lens.py info [simbolo] [dir]                 # Exibe diagnóstico arquitetural de uma classe/método
   python3 lens.py new folder <caminho>                 # Cria pasta com segurança contra path traversal
   python3 lens.py new md <caminho> [--template NOME]   # Cria especificação MD (task, spec, context, empty)
+  python3 lens.py rename <antigo> <novo_nome>          # Renomeia arquivo ou pasta com segurança
+  python3 lens.py delete <caminho>                     # Exclui arquivo ou pasta com segurança
     """)
 
 
@@ -163,6 +165,32 @@ Exemplos:
                 print(f"❌ Erro ao criar arquivo Markdown: {e}")
         else:
             print(f"❌ Tipo desconhecido: '{sub_type}'. Use 'folder' ou 'md'.")
+
+    elif cmd == "rename":
+        if len(sys.argv) < 4:
+            print("Uso: python3 lens.py rename <caminho_antigo> <novo_nome_ou_caminho>")
+            return
+        old_path = sys.argv[2]
+        new_name = sys.argv[3]
+        from core.creator import rename_resource
+        try:
+            full_path = rename_resource(".", old_path, new_name)
+            print(f"✅ Renomeado com sucesso para: {full_path}")
+        except Exception as e:
+            print(f"❌ Erro ao renomear: {e}")
+
+    elif cmd == "delete":
+        if len(sys.argv) < 3:
+            print("Uso: python3 lens.py delete <caminho_do_arquivo_ou_pasta>")
+            return
+        target_path = sys.argv[2]
+        from core.creator import delete_resource
+        try:
+            full_path = delete_resource(".", target_path)
+            print(f"🗑️ Excluído com sucesso: {full_path}")
+        except Exception as e:
+            print(f"❌ Erro ao excluir: {e}")
+
     else:
         print_help()
 
