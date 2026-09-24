@@ -162,6 +162,7 @@ class ArchitectureWatcher:
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.send_header("Access-Control-Allow-Private-Network", "true")
                 self.end_headers()
                 self.wfile.write(body)
 
@@ -170,6 +171,7 @@ class ArchitectureWatcher:
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.send_header("Access-Control-Allow-Private-Network", "true")
                 self.end_headers()
 
             def do_GET(self):
@@ -287,7 +289,14 @@ class ArchitectureWatcher:
                 self._send_json(404, {"success": False, "error": "Rota não encontrada."})
 
         try:
-            self.server = ThreadedHTTPServer(("127.0.0.1", self.port), WatcherHandler)
+            port = self.port
+            for p in range(port, port + 30):
+                try:
+                    self.server = ThreadedHTTPServer(("127.0.0.1", p), WatcherHandler)
+                    self.port = p
+                    break
+                except OSError:
+                    continue
             self.server.serve_forever()
         except KeyboardInterrupt:
             print("\n🛑 Encerrando Watch Mode...")

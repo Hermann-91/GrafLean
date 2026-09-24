@@ -57,7 +57,19 @@ def main():
         viz = ArchitectureVisualizer(g)
         html_path = viz.generate_html()
         print(f"✅ Mapa interativo gerado: {html_path}")
-        webbrowser.open(f"file://{html_path}")
+
+        if "--static" in sys.argv:
+            print("📄 Modo estático ativado. Abrindo arquivo local...")
+            webbrowser.open(f"file://{html_path}")
+        else:
+            port = 7357
+            if "--port" in sys.argv:
+                idx = sys.argv.index("--port")
+                if idx + 1 < len(sys.argv):
+                    port = int(sys.argv[idx + 1])
+            from core.watcher import ArchitectureWatcher
+            watcher = ArchitectureWatcher(target_dir, port=port)
+            watcher.start_watching()
 
     elif cmd == "watch":
         port = 7357
