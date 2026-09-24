@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-CLI Unificada — Sublime Architecture Lens.
-Permite escanear projetos, gerar mapas visuais, auditar métricas e inspecionar símbolos no terminal.
+CLI Unificada — GrafLens (Architecture & Agent Orchestration Lens).
+Permite escanear projetos, gerar mapas visuais, auditar métricas, inspecionar símbolos
+e criar recursos (pastas e especificações Markdown) para orquestração de agentes.
 """
 
 import sys
@@ -17,14 +18,16 @@ from core.visualizer import ArchitectureVisualizer
 
 def print_help():
     print("""
-🔍 Sublime Architecture Lens — CLI
+🏛️ GrafLens — Architecture & Agent Orchestration CLI
 
 Uso:
-  python3 lens.py scan [diretorio]      # Escaneia o projeto e gera .arch_graph.json
-  python3 lens.py map [diretorio]       # Gera o mapa interativo arch_map.html e abre no navegador
-  python3 lens.py info [simbolo] [dir]  # Exibe diagnóstico arquitetural de uma classe/método
-  python3 lens.py audit [diretorio]     # Audita ciclos de dependência e acoplamento
-  python3 lens.py watch [diretorio]     # Modo vigilante: Live-reload em tempo real no navegador
+  python3 lens.py scan [diretorio]                     # Escaneia o projeto e gera .arch_graph.json
+  python3 lens.py map [diretorio]                      # Gera o mapa interativo arch_map.html e abre no navegador
+  python3 lens.py watch [diretorio]                    # Modo vigilante: Live-reload e API ativa em tempo real
+  python3 lens.py audit [diretorio]                    # Audita ciclos de dependência e estabilidade arquitetural
+  python3 lens.py info [simbolo] [dir]                 # Exibe diagnóstico arquitetural de uma classe/método
+  python3 lens.py new folder <caminho>                 # Cria pasta com segurança contra path traversal
+  python3 lens.py new md <caminho> [--template NOME]   # Cria especificação MD (task, spec, context, empty)
     """)
 
 
@@ -115,6 +118,51 @@ def main():
             print("\n📤 Depende de:")
             for dep in outbound:
                 print(f"  • {dep}")
+
+    elif cmd == "new":
+        if len(sys.argv) < 3 or sys.argv[2] in ("-h", "--help"):
+            print("""
+Uso do comando new:
+  python3 lens.py new folder <caminho>
+  python3 lens.py new md <caminho> [--template task|spec|context|empty]
+
+Exemplos:
+  python3 lens.py new folder docs/specs
+  python3 lens.py new md docs/specs/TASK_AUTH.md --template task
+            """)
+            return
+
+        sub_type = sys.argv[2].lower()
+        if sub_type == "folder":
+            if len(sys.argv) < 4:
+                print("❌ Especifique o caminho da pasta: python3 lens.py new folder <caminho>")
+                return
+            folder_path = sys.argv[3]
+            from core.creator import create_folder
+            try:
+                full_path = create_folder(".", folder_path)
+                print(f"✅ Pasta criada com sucesso: {full_path}")
+            except Exception as e:
+                print(f"❌ Erro ao criar pasta: {e}")
+
+        elif sub_type in ("md", "file"):
+            if len(sys.argv) < 4:
+                print("❌ Especifique o caminho do arquivo: python3 lens.py new md <caminho> [--template task|spec|context]")
+                return
+            file_path = sys.argv[3]
+            template = "task"
+            if "--template" in sys.argv:
+                t_idx = sys.argv.index("--template")
+                if t_idx + 1 < len(sys.argv):
+                    template = sys.argv[t_idx + 1]
+            from core.creator import create_markdown_spec
+            try:
+                full_path = create_markdown_spec(".", file_path, template_key=template)
+                print(f"✅ Arquivo Markdown criado com sucesso ({template}): {full_path}")
+            except Exception as e:
+                print(f"❌ Erro ao criar arquivo Markdown: {e}")
+        else:
+            print(f"❌ Tipo desconhecido: '{sub_type}'. Use 'folder' ou 'md'.")
     else:
         print_help()
 
