@@ -300,6 +300,21 @@ class ArchitectureWatcher:
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
 
+                elif self.path == "/api/save-file":
+                    file_path = payload.get("path", "").strip()
+                    content = payload.get("content", "")
+                    if not file_path:
+                        return self._send_json(400, {"success": False, "error": "Caminho do arquivo é obrigatório."})
+                    try:
+                        from core.creator import save_file_content
+                        saved = save_file_content(watcher.target_dir, file_path, content)
+                        rel_saved = os.path.relpath(saved, watcher.target_dir)
+                        watcher.build_initial()
+                        watcher.notify_clients()
+                        return self._send_json(200, {"success": True, "saved": rel_saved})
+                    except Exception as e:
+                        return self._send_json(400, {"success": False, "error": str(e)})
+
                 self._send_json(404, {"success": False, "error": "Rota não encontrada."})
 
         try:

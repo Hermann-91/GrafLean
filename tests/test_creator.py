@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from core.creator import (
     create_folder, create_markdown_spec, is_safe_path,
-    rename_resource, delete_resource, TEMPLATES
+    rename_resource, delete_resource, save_file_content, TEMPLATES
 )
 
 
@@ -101,6 +101,17 @@ class TestProjectCreator(unittest.TestCase):
             delete_resource(self.test_dir, ".")
         with self.assertRaises(ValueError):
             delete_resource(self.test_dir, "")
+
+    def test_save_file_content_success(self):
+        target = "docs/TASK.md"
+        saved = save_file_content(self.test_dir, target, "# Nova Tarefa")
+        self.assertTrue(os.path.isfile(saved))
+        with open(saved, "r", encoding="utf-8") as f:
+            self.assertEqual(f.read(), "# Nova Tarefa")
+
+    def test_save_file_content_traversal_rejection(self):
+        with self.assertRaises(ValueError):
+            save_file_content(self.test_dir, "../../evil.sh", "echo bad")
 
 
 if __name__ == "__main__":

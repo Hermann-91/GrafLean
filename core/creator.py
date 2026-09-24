@@ -193,3 +193,26 @@ def delete_resource(base_dir: str, relative_path: str) -> str:
         os.remove(full_path)
 
     return full_path
+
+
+def save_file_content(base_dir: str, file_path: str, content: str) -> str:
+    """
+    Salva o conteúdo de um arquivo de forma segura, prevenindo Path Traversal.
+    Retorna o caminho absoluto do arquivo salvo.
+    """
+    if os.path.isabs(file_path):
+        rel_path = os.path.relpath(file_path, base_dir)
+    else:
+        rel_path = file_path
+
+    if not is_safe_path(base_dir, rel_path):
+        raise ValueError(f"Caminho inseguro detectado (Path Traversal): {file_path}")
+
+    full_path = os.path.abspath(os.path.join(base_dir, rel_path))
+    parent = os.path.dirname(full_path)
+    os.makedirs(parent, exist_ok=True)
+
+    with open(full_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    return full_path

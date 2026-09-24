@@ -704,6 +704,25 @@ class ArchitectureVisualizer:
             position: relative;
             background-color: #000000;
         }}
+        #sublime-editor-textarea {{
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            color: #f8f8f2;
+            font-family: "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 14px 18px;
+            border: none;
+            outline: none;
+            resize: none;
+            tab-size: 4;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+            box-sizing: border-box;
+            display: none;
+        }}
 
         /* Tabela com Gutter e Código 100% Monokai */
         .sublime-table {{
@@ -892,6 +911,8 @@ class ArchitectureVisualizer:
                             <span id="sublime-tab-filename">Nenhum arquivo</span>
                         </div>
                         <div class="sublime-toolbar-actions">
+                            <button class="sublime-btn" id="btn-toggle-edit" onclick="toggleEditMode()" title="Alternar entre Leitura e Edição">✏️ Editar</button>
+                            <button class="sublime-btn" id="btn-save-code" onclick="saveCurrentCode()" style="display:none; background:#a6e22e; color:#11111b; font-weight:700; border-color:#a6e22e;" title="Salvar Alterações no Disco (Ctrl+S)">💾 Salvar</button>
                             <button class="sublime-btn" onclick="copyCurrentCode()" title="Copiar Código">📋 Copiar</button>
                         </div>
                     </div>
@@ -902,6 +923,7 @@ class ArchitectureVisualizer:
                                 // Clique em qualquer arquivo ou símbolo da árvore à esquerda para carregar o código...
                             </div>
                         </div>
+                        <textarea id="sublime-editor-textarea" spellcheck="false" placeholder="Digite ou edite o conteúdo do arquivo aqui..."></textarea>
                     </div>
 
                     <div class="sublime-statusbar">
@@ -938,6 +960,8 @@ class ArchitectureVisualizer:
         const rawTree = JSON.parse(document.getElementById('data-tree').textContent);
         const rawFileSources = JSON.parse(document.getElementById('data-sources').textContent);
         let currentNavTab = 'tree';
+        let isEditMode = false;
+        let currentLoadedFilePath = null;
 
         const colorMap = {{
             "class": "#89b4fa",
@@ -1164,7 +1188,9 @@ class ArchitectureVisualizer:
             }},
 
             loadCode(filePath, targetLine) {{
+                currentLoadedFilePath = filePath;
                 const container = document.getElementById('sublime-table-container');
+                const textarea = document.getElementById('sublime-editor-textarea');
                 const tabFilename = document.getElementById('sublime-tab-filename');
                 const statusPos = document.getElementById('sublime-status-pos');
                 const statusLang = document.getElementById('sublime-status-lang');
@@ -1172,12 +1198,14 @@ class ArchitectureVisualizer:
                 if (!filePath || !rawFileSources[filePath]) {{
                     container.innerHTML = '<div style="padding: 20px; color: #75715e;">// Arquivo não disponível no cache.</div>';
                     tabFilename.innerText = 'Sem arquivo';
+                    if (textarea) textarea.value = '';
                     return;
                 }}
 
                 const source = rawFileSources[filePath];
                 const fileName = filePath.split('/').pop();
                 tabFilename.innerText = fileName;
+                if (textarea) textarea.value = source;
 
                 let lang = 'python';
                 let langLabel = 'Python';
@@ -1185,9 +1213,11 @@ class ArchitectureVisualizer:
                 else if (filePath.endsWith('.js') || filePath.endsWith('.jsx')) {{ lang = 'javascript'; langLabel = 'JavaScript'; }}
                 else if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {{ lang = 'typescript'; langLabel = 'TypeScript'; }}
                 else if (filePath.endsWith('.html') || filePath.endsWith('.blade.php')) {{ lang = 'html'; langLabel = 'HTML / Blade'; }}
+                else if (filePath.endsWith('.md')) {{ lang = 'markdown'; langLabel = 'Markdown'; }}
+                else if (filePath.endsWith('.json')) {{ lang = 'json'; langLabel = 'JSON'; }}
 
                 statusPos.innerText = `Line ${{targetLine || 1}}, Column 1`;
-                statusLang.innerText = `UTF-8 | ${{langLabel}}`;
+                statusLang.innerText = isEditMode ? `UTF-8 | ${{langLabel}} (Modo Edição • Ctrl+S para Salvar)` : `UTF-8 | ${{langLabel}}`;
 
                 let highlightedHtml = '';
                 try {{
@@ -1507,6 +1537,91 @@ class ArchitectureVisualizer:
                 alert('Código copiado com sucesso!');
             }});
         }}
+
+        function toggleEditMode(forceState) {{
+            if (!currentLoadedFilePath) {{
+                alert('Selecione um arquivo na árvore lateral antes de editar.');
+                return;
+            }}
+            if (typeof forceState === 'boolean') {{
+                isEditMode = forceState;
+            }} else {{
+                isEditMode = !isEditMode;
+            }}
+
+            const tableContainer = document.getElementById('sublime-table-container');
+            const textarea = document.getElementById('sublime-editor-textarea');
+            const btnEdit = document.getElementById('btn-toggle-edit');
+            const btnSave = document.getElementById('btn-save-code');
+            const statusLang = document.getElementById('sublime-status-lang');
+
+            if (isEditMode) {{
+                tableContainer.style.display = 'none';
+                textarea.style.display = 'block';
+                textarea.value = rawFileSources[currentLoadedFilePath] || '';
+                btnEdit.innerHTML = '👁️ Visualizar';
+                btnEdit.style.background = '#fd971f';
+                btnEdit.style.color = '#111';
+                btnSave.style.display = 'inline-flex';
+                statusLang.innerText = `${{statusLang.innerText.split('(')[0].trim()}} (Modo Edição • Ctrl+S para Salvar)`;
+                textarea.focus();
+            }} else {{
+                textarea.style.display = 'none';
+                tableContainer.style.display = 'block';
+                btnEdit.innerHTML = '✏️ Editar';
+                btnEdit.style.background = '';
+                btnEdit.style.color = '';
+                btnSave.style.display = 'none';
+                Mediator.loadCode(currentLoadedFilePath);
+            }}
+        }}
+
+        async function saveCurrentCode() {{
+            if (!currentLoadedFilePath) return;
+            const textarea = document.getElementById('sublime-editor-textarea');
+            const content = textarea.value;
+            const btnSave = document.getElementById('btn-save-code');
+            const originalText = btnSave.innerHTML;
+            btnSave.innerHTML = '⏳ Salvando...';
+            btnSave.disabled = true;
+
+            await executeBackendApi('/api/save-file', {{
+                path: currentLoadedFilePath,
+                content: content
+            }}, '💾 Arquivo salvo com sucesso no disco!');
+
+            btnSave.innerHTML = originalText;
+            btnSave.disabled = false;
+            rawFileSources[currentLoadedFilePath] = content;
+        }}
+
+        // Atalhos de teclado: Tab (4 espaços) e Ctrl+S / Cmd+S para salvar instantaneamente
+        document.addEventListener('DOMContentLoaded', () => {{
+            const editorTextarea = document.getElementById('sublime-editor-textarea');
+            if (editorTextarea) {{
+                editorTextarea.addEventListener('keydown', (e) => {{
+                    if (e.key === 'Tab') {{
+                        e.preventDefault();
+                        const start = editorTextarea.selectionStart;
+                        const end = editorTextarea.selectionEnd;
+                        editorTextarea.value = editorTextarea.value.substring(0, start) + '    ' + editorTextarea.value.substring(end);
+                        editorTextarea.selectionStart = editorTextarea.selectionEnd = start + 4;
+                    }} else if ((e.ctrlKey || e.metaKey) && e.key === 's') {{
+                        e.preventDefault();
+                        saveCurrentCode();
+                    }}
+                }});
+            }}
+
+            window.addEventListener('keydown', (e) => {{
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {{
+                    if (isEditMode) {{
+                        e.preventDefault();
+                        saveCurrentCode();
+                    }}
+                }}
+            }});
+        }});
 
         // 9. Busca em tempo real
         function onSearchInput(query) {{
