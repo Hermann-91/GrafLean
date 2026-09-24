@@ -38,7 +38,7 @@ class ArchitectureWatcher:
 
     WATCH_EXTENSIONS = (
         ".php", ".py", ".js", ".ts", ".jsx", ".tsx",
-        ".blade.php", ".html", ".css", ".json"
+        ".blade.php", ".html", ".css", ".json", ".md"
     )
 
     IGNORE_DIRS = {

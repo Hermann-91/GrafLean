@@ -102,23 +102,31 @@ class ProjectTreeBuilder:
         root_name = os.path.basename(self.root_dir) or "root"
         root = DirectoryNode(root_name, "")
 
-        # 1. Descobre todos os diretórios reais no disco (inclusive pastas vazias recém-criadas)
+        # 1. Descobre todos os diretórios e arquivos reais no disco (inclusive arquivos .md, configs, etc.)
         ignored_dirs = {".git", ".svn", ".hg", "__pycache__", "node_modules", "vendor", ".idea", ".vscode"}
+        ignored_files = {"arch_map.html", ".arch_graph.json"}
+        files_map: Dict[str, FileLeaf] = {}
+
         if os.path.exists(self.root_dir):
-            for root_path, dirs, _ in os.walk(self.root_dir):
+            for root_path, dirs, files in os.walk(self.root_dir):
                 dirs[:] = [d for d in dirs if d not in ignored_dirs and not d.startswith(".")]
                 rel_dir = os.path.relpath(root_path, self.root_dir)
-                if rel_dir == ".":
-                    continue
-                parts = rel_dir.split(os.sep)
-                curr = root
-                curr_p = ""
-                for part in parts:
-                    curr_p = os.path.join(curr_p, part) if curr_p else part
-                    curr = curr.get_or_create_dir(part, curr_p)
+                if rel_dir != ".":
+                    parts = rel_dir.split(os.sep)
+                    curr = root
+                    curr_p = ""
+                    for part in parts:
+                        curr_p = os.path.join(curr_p, part) if curr_p else part
+                        curr = curr.get_or_create_dir(part, curr_p)
 
-        # 2. Agrupa nós por arquivo
-        files_map: Dict[str, FileLeaf] = {}
+                for f in files:
+                    if f in ignored_files or f.startswith("."):
+                        continue
+                    full_f = os.path.join(root_path, f)
+                    rel_f = os.path.relpath(full_f, self.root_dir)
+                    files_map[rel_f] = FileLeaf(f, rel_f, f"file://{full_f}")
+
+        # 2. Agrupa nós de símbolos por arquivo e atualiza status git
         for node in self.nodes.values():
             rel_file = os.path.relpath(node.file_path, self.root_dir)
             if rel_file not in files_map:
@@ -144,4 +152,5 @@ class ProjectTreeBuilder:
 
             current_dir.add_file(file_leaf)
 
+        self.files_map = files_map
         return root

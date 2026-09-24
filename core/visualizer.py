@@ -69,14 +69,21 @@ class ArchitectureVisualizer:
 
         # 4. Coleta o conteúdo dos arquivos para visualização de código sob demanda
         file_sources = {}
-        for node in self.graph.nodes.values():
-            if node.file_path and os.path.isfile(node.file_path):
-                if node.file_path not in file_sources:
-                    try:
-                        with open(node.file_path, "r", encoding="utf-8", errors="replace") as f:
-                            file_sources[node.file_path] = f.read()
-                    except Exception:
-                        file_sources[node.file_path] = ""
+        all_paths = set(node.file_path for node in self.graph.nodes.values() if node.file_path)
+        if hasattr(tree_builder, "files_map"):
+            for rel_f in tree_builder.files_map.keys():
+                all_paths.add(os.path.join(self.graph.root_dir, rel_f))
+
+        for f_path in all_paths:
+            if os.path.isfile(f_path):
+                try:
+                    if os.path.getsize(f_path) <= 500 * 1024:
+                        with open(f_path, "r", encoding="utf-8", errors="replace") as f:
+                            file_sources[f_path] = f.read()
+                    else:
+                        file_sources[f_path] = "<!-- Arquivo excede 500KB para exibição inline -->"
+                except Exception:
+                    file_sources[f_path] = ""
 
         def safe_json(data) -> str:
             # Escapa < e > como unicode \u003c e \u003e para garantir conformidade estrita com RFC 8259 (JSON)

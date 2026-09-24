@@ -8,6 +8,7 @@ from core.parsers.registry import ParserRegistry
 from core.parsers.python_parser import PythonParser
 from core.parsers.js_ts_parser import JSTypeScriptParser
 from core.parsers.html_blade_parser import HTMLBladeParser
+from core.parsers.markdown_parser import MarkdownParser
 from core.models import SymbolType, EdgeType
 
 
@@ -20,6 +21,7 @@ class TestMultiLanguageParsers(unittest.TestCase):
         self.assertIsInstance(self.registry.get_parser_for_file("Checkout.tsx"), JSTypeScriptParser)
         self.assertIsInstance(self.registry.get_parser_for_file("index.html"), HTMLBladeParser)
         self.assertIsInstance(self.registry.get_parser_for_file("layout.blade.php"), HTMLBladeParser)
+        self.assertIsInstance(self.registry.get_parser_for_file("TASK.md"), MarkdownParser)
 
     def test_python_parser_extracts_classes_and_calls(self):
         code = '''
@@ -73,6 +75,31 @@ export const CheckoutView = () => {
         self.assertIn("blade://partials.nav", targets)
         self.assertIn("blade-component://alert", targets)
         self.assertIn("asset://style.css", targets)
+
+    def test_markdown_parser_extracts_title_sections_and_links(self):
+        code = '''# 📋 Tarefa do Agente
+
+## 🎯 Objetivo
+Executar testes.
+
+## 🔗 Referências
+Veja [Order](src/Domain/Models/Order.php) para detalhes.
+'''
+        parser = MarkdownParser()
+        result = parser.parse_source(code, "tasks/TASK.md")
+        files = [n for n in result.nodes if n.symbol_type == SymbolType.FILE]
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0].name, "TASK.md")
+        self.assertEqual(files[0].docstring, "📋 Tarefa do Agente")
+
+        funcs = [n for n in result.nodes if n.symbol_type == SymbolType.FUNCTION]
+        sec_names = [f.name for f in funcs]
+        self.assertIn("🎯 Objetivo", sec_names)
+        self.assertIn("🔗 Referências", sec_names)
+
+        links = [e for e in result.edges if e.edge_type == EdgeType.CALLS]
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].target_id, "src/Domain/Models/Order.php")
 
 
 if __name__ == "__main__":
