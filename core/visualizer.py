@@ -1022,13 +1022,14 @@ class ArchitectureVisualizer:
             if (data.sources) {{
                 rawFileSources = data.sources;
             }}
-            if (data.nodes && window.nodes) {{
+            if (data.nodes && (typeof nodes !== 'undefined' || window.nodes)) {{
+                const targetNodes = typeof nodes !== 'undefined' ? nodes : window.nodes;
                 rawNodes = data.nodes;
                 const currentIds = new Set(data.nodes.map(n => n.id));
-                const existingIds = nodes.getIds();
+                const existingIds = targetNodes.getIds();
                 const toRemove = existingIds.filter(id => !currentIds.has(id));
-                if (toRemove.length > 0) nodes.remove(toRemove);
-                nodes.update(data.nodes.map(n => ({{
+                if (toRemove.length > 0) targetNodes.remove(toRemove);
+                targetNodes.update(data.nodes.map(n => ({{
                     id: n.id,
                     label: n.label,
                     title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + n.title,
@@ -1045,17 +1046,20 @@ class ArchitectureVisualizer:
                         bold: n.type === "file"
                     }}
                 }})));
+                if (typeof network !== 'undefined') network.redraw();
             }}
-            if (data.edges && window.edges) {{
+            if (data.edges && (typeof edges !== 'undefined' || window.edges)) {{
+                const targetEdges = typeof edges !== 'undefined' ? edges : window.edges;
                 rawEdges = data.edges;
-                edges.clear();
-                edges.add(data.edges.map(e => ({{
+                targetEdges.clear();
+                targetEdges.add(data.edges.map(e => ({{
                     from: e.source,
                     to: e.target,
                     arrows: "to",
                     color: {{ color: "#45475a", highlight: "#89b4fa" }},
                     width: 1
                 }})));
+                if (typeof network !== 'undefined') network.redraw();
             }}
             if (currentLoadedFilePath && !rawFileSources[currentLoadedFilePath]) {{
                 currentLoadedFilePath = null;
@@ -1126,6 +1130,9 @@ class ArchitectureVisualizer:
                 forceAtlas2Based: {{ gravitationalConstant: -55, centralGravity: 0.01, springLength: 95 }}
             }}
         }});
+        window.nodes = nodes;
+        window.edges = edges;
+        window.network = network;
 
         // 2. Construtor da Tabela de Código Monokai Sublime
         function buildSublimeTable(highlightedHtml, targetLine) {{
@@ -1876,11 +1883,11 @@ class ArchitectureVisualizer:
                 btnNewFolder.onclick = () => promptCreateFolder(activeContextPath);
                 menu.appendChild(btnNewFolder);
 
-                const btnNewMd = document.createElement('button');
-                btnNewMd.className = 'tree-context-item';
-                btnNewMd.innerHTML = '<span>📄</span> Criar arquivo .md';
-                btnNewMd.onclick = () => promptCreateMarkdown(activeContextPath);
-                menu.appendChild(btnNewMd);
+                const btnNewFile = document.createElement('button');
+                btnNewFile.className = 'tree-context-item';
+                btnNewFile.innerHTML = '<span>📄</span> Criar arquivo';
+                btnNewFile.onclick = () => promptCreateFile(activeContextPath);
+                menu.appendChild(btnNewFile);
 
                 const btnRename = document.createElement('button');
                 btnRename.className = 'tree-context-item';
@@ -1959,15 +1966,20 @@ class ArchitectureVisualizer:
             await executeBackendApi('/api/create-folder', {{ path: finalRelPath }}, `✅ Pasta "${{folderName.trim()}}" criada com sucesso!`);
         }}
 
-        async function promptCreateMarkdown(parentRelPath) {{
+        async function promptCreateFile(parentRelPath) {{
             closeTreeContextMenu();
             const targetDesc = parentRelPath || 'raiz do projeto';
-            let fileName = window.prompt(`Criar arquivo Markdown (.md) em "${{targetDesc}}":`, 'TASK.md');
+            let fileName = window.prompt(`Criar arquivo em "${{targetDesc}}":`, 'novo_arquivo.md');
             if (!fileName || !fileName.trim()) return;
-            if (!fileName.endsWith('.md')) fileName += '.md';
 
             const finalRelPath = parentRelPath ? `${{parentRelPath}}/${{fileName.trim()}}` : fileName.trim();
-            await executeBackendApi('/api/create-file', {{ path: finalRelPath, template: 'task' }}, `✅ Arquivo "${{fileName.trim()}}" criado com sucesso!`);
+            if (parentRelPath) {{
+                openFolders.add(parentRelPath);
+                try {{
+                    localStorage.setItem('graf_lens_open_folders', JSON.stringify(Array.from(openFolders)));
+                }} catch (e) {{}}
+            }}
+            await executeBackendApi('/api/create-file', {{ path: finalRelPath, content: '' }}, `✅ Arquivo "${{fileName.trim()}}" criado com sucesso!`);
         }}
 
         async function promptRename(relPath, currentName) {{
