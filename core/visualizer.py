@@ -94,14 +94,14 @@ class ArchitectureVisualizer:
         edges_json = safe_json(edges_data)
         tree_json = safe_json(tree_data)
         sources_json = safe_json(file_sources)
-        project_name = os.path.basename(os.path.abspath(self.graph.root_dir)) or "GrafLens"
+        project_name = os.path.basename(os.path.abspath(self.graph.root_dir)) or "GrafLean"
 
         html_template = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{project_name} — GrafLens</title>
+    <title>{project_name} — GrafLean</title>
     <!-- Vis.js para Renderização de Grafo -->
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     
@@ -844,7 +844,7 @@ class ArchitectureVisualizer:
         <!-- Header do Workspace -->
         <div class="workspace-header">
             <div>
-                <div class="brand-title">🏛️ GrafLens</div>
+                <div class="brand-title">🏛️ GrafLean</div>
                 <div class="brand-sub">📁 {project_name}</div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
@@ -1956,7 +1956,7 @@ class ArchitectureVisualizer:
                     showToast('❌ Erro: ' + (data.error || 'Operação falhou'), 'error');
                 }}
             }} catch (err) {{
-                showToast('⚠️ O servidor HTTP local do GrafLens não está respondendo.', 'error');
+                showToast('⚠️ O servidor HTTP local do GrafLean não está respondendo.', 'error');
             }}
         }}
 

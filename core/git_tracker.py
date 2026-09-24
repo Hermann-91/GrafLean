@@ -17,7 +17,7 @@ class GitStatusType:
 
 class GitTracker:
     """
-    Rastreador leve de status do Git para projetos monitorados pelo GrafLens.
+    Rastreador leve de status do Git para projetos monitorados pelo GrafLean.
     """
 
     def __init__(self, root_dir: str):

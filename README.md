@@ -1,11 +1,11 @@
-# 🔍 GrafLens — Architectural Code Review & Top-Down Lens
+# 🔍 GrafLean — Architecture-First IDE & Top-Down Lens
 
 > **Lente de Raio-X Arquitetural e Plataforma de Code Review Local de Alta Performance.**
 > Mapeamento determinístico de dependências em grafos, métricas de *Clean Architecture*, árvore estrutural e editor com tema Monokai Sublime, equipado com sincronização contínua em tempo real (*Watch Mode*) para programação em par com IA.
 
 ---
 
-## ⚡ Por que o GrafLens?
+## ⚡ Por que o GrafLean?
 
 Durante o desenvolvimento de software e o uso intenso de modelos de IA, desenvolvedores frequentemente sofrem com a **sobrecarga cognitiva**:
 * *"Quem chama este método?"*
@@ -13,7 +13,7 @@ Durante o desenvolvimento de software e o uso intenso de modelos de IA, desenvol
 * *"Este módulo é profundo (Deep Module) ou esconde complexidade acidental?"*
 * *"Como auditar o impacto sistêmico do código gerado pela IA em menos de 1 segundo?"*
 
-O **GrafLens** soluciona esse gargalo operando como um **óculos de raio-X arquitetural**. Ele não depende de plugins pesados, bibliotecas externas (`pip install`) ou conexões com a internet: analisa os códigos via AST nativo em **< 15ms**, gerando uma estação de trabalho visual integrada e interativa no seu navegador.
+O **GrafLean** soluciona esse gargalo operando como uma **IDE de raio-X arquitetural**. Ele não depende de plugins pesados, bibliotecas externas (`pip install`) ou conexões com a internet: analisa os códigos via AST nativo em **< 15ms**, gerando uma estação de trabalho visual integrada e interativa no seu navegador.
 
 ---
 
@@ -64,7 +64,7 @@ O **GrafLens** soluciona esse gargalo operando como um **óculos de raio-X arqui
 
 ## 📐 Fundamentos Teóricos e Princípios de Engenharia
 
-O GrafLens foi projetado aplicando os princípios das principais literaturas de Engenharia de Software:
+O GrafLean foi projetado aplicando os princípios das principais literaturas de Engenharia de Software:
 
 1. **Clean Architecture (*Robert C. Martin*):**
    * **Acoplamento Aferente ($C_a$):** Número de classes externas que dependem deste módulo.

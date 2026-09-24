@@ -12,11 +12,11 @@ Ao repousar o cursor (`on_hover`) sobre uma **função, método, classe ou cabe�
 ---
 
 ## 2. Localização e Estrutura do Projeto
-**Caminho Raiz:** `/home/hermann/Documentos/Pasta_Code/Ferramentas/sublime-architecture-lens/`
+**Caminho Raiz:** `./` (Repositório GrafLean)
 
 ### Estrutura de Diretórios:
 ```text
-sublime-architecture-lens/
+GrafLean/
 ├── doc/
 │   └── plano_architecture_lens.md    # Este plano técnico
 ├── AGENT.md                          # Contrato de atuação e diretrizes de excelência do Agente
@@ -66,7 +66,7 @@ sublime-architecture-lens/
 ### Fase 3: Mapa Global Interativo e Integração com o Laboratório
 * Comando `Architecture: Show Project Architecture` na paleta de comandos (`Ctrl+Shift+P`).
 * Gera um arquivo `arch_map.html` autocontido com visualização de nós e comunidades em tela cheia.
-* Teste prático e validação no projeto do laboratório: `/home/hermann/Documentos/Pasta_Code/Estudos/Eng_Software_Moderna/laboratorio/desafios/fase_1/projeto_checkout/`.
+* Teste prático e validação em projetos de exemplo e suítes de teste automatizadas.
 
 ---
 

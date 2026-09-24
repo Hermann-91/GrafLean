@@ -36,7 +36,7 @@ class TestArchitectureVisualizer(unittest.TestCase):
             self.assertIn("ClassA", content)
             self.assertIn("ClassB", content)
             self.assertIn("vis-network", content)
-            self.assertIn("GrafLens", content)
+            self.assertIn("GrafLean", content)
             self.assertIn("tree-context-menu", content)
             self.assertIn("openTreeContextMenu", content)
             self.assertIn("copyAgentPrompt", content)

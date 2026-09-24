@@ -28,10 +28,10 @@ Descreva o que o agente deve realizar nesta tarefa de forma clara e delimitada.
 ## ✅ Critérios de Aceite
 - [ ] Implementação da funcionalidade / correção.
 - [ ] Testes unitários cobrindo cenários de sucesso e borda.
-- [ ] Validação do mapa arquitetural no GrafLens.
+- [ ] Validação do mapa arquitetural no GrafLean.
 
 ## 🚀 Passos de Execução Sugeridos
-1. Analisar os arquivos afetados e dependências no GrafLens.
+1. Analisar os arquivos afetados e dependências no GrafLean.
 2. Escrever testes unitários para a funcionalidade.
 3. Implementar as modificações necessárias.
 4. Executar os testes e validar no navegador.
@@ -58,7 +58,7 @@ Resumo das responsabilidades, fronteiras arquiteturais e objetivos deste compone
 
 ## 📦 Stack do Projeto
 - Linguagens: Python, PHP, JavaScript / TypeScript
-- Ferramentas: GrafLens, Git
+- Ferramentas: GrafLean, Git
 
 ## 🛠️ Comandos Essenciais
 - **Testes:** `python3 -m unittest discover -s tests -p "test_*.py" -v`

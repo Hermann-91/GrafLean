@@ -1,4 +1,4 @@
-# Contrato do Agente de Engenharia — Sublime Architecture Lens 🔍🧠
+# Contrato do Agente de Engenharia — GrafLean 🔍🧠
 
 Este documento define as diretrizes técnicas, arquiteturais e comportamentais para qualquer assistente de IA ou agente autônomo que atue no desenvolvimento desta ferramenta.
 
@@ -28,8 +28,8 @@ Construir uma ferramenta de alta performance para o **Sublime Text** que elimine
 - Chamadas dinâmicas ou resoluções de container não determinísticas devem ser marcadas como `AMBIGUOUS` ou `DYNAMIC`.
 - Ciclos de dependência (A ➔ B ➔ A) devem ser detectados e sinalizados como alertas arquiteturais.
 
-### 4. Ergonomia Cognitiva para o Hermann (Pensamento Top-Down)
-- Hermann tem raciocínio sistêmico em teia: ele precisa ver de onde o dado vem e para onde vai antes que a função isolada faça sentido.
+### 4. Ergonomia Cognitiva para o Desenvolvedor (Pensamento Top-Down)
+- O desenvolvedor tem raciocínio sistêmico em teia: precisa ver de onde o dado vem e para onde vai antes que a função isolada faça sentido.
 - O pop-up deve sempre responder:
   1. *O que é este elemento e qual sua responsabilidade?*
   2. *Quem o chama? (Inbound / Ca)*

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI Unificada — GrafLens (Architecture & Agent Orchestration Lens).
+CLI Unificada — GrafLean (Architecture & Agent Orchestration Lens).
 Permite escanear projetos, gerar mapas visuais, auditar métricas, inspecionar símbolos
 e criar recursos (pastas e especificações Markdown) para orquestração de agentes.
 """
@@ -18,7 +18,7 @@ from core.visualizer import ArchitectureVisualizer
 
 def print_help():
     print("""
-🏛️ GrafLens — Architecture & Agent Orchestration CLI
+🏛️ GrafLean — Architecture & Agent Orchestration CLI
 
 Uso:
   python3 lens.py scan [diretorio]                     # Escaneia o projeto e gera .arch_graph.json
