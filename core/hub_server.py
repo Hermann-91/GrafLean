@@ -375,9 +375,7 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                 self._send_html(404, "<h1>404 — Projeto não encontrado no GrafLean Hub</h1><p><a href='/'>Voltar para a Biblioteca</a></p>")
                 return
 
-            workspace_html = session.visualizer.generate_html()
-            with open(workspace_html, "r", encoding="utf-8") as f:
-                content = f.read()
+            content = session.visualizer.render_html()
 
             # Injeta botão de retorno para a biblioteca no cabeçalho do Workspace
             btn_hub = (

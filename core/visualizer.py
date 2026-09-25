@@ -30,7 +30,12 @@ class ArchitectureVisualizer:
     def generate_html(self, output_path: Optional[str] = None) -> str:
         if not output_path:
             output_path = os.path.join(self.graph.root_dir, "arch_map.html")
+        html_content = self.render_html()
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        return output_path
 
+    def render_html(self) -> str:
         # 1. Prepara dados dos nós
         nodes_data = []
         for node in self.graph.nodes.values():
@@ -1256,48 +1261,58 @@ class ArchitectureVisualizer:
             return sub.edges;
         }}
 
-        const nodes = new vis.DataSet(getFilteredNodes());
-        const edges = new vis.DataSet(getFilteredEdges());
+        let nodes = new vis.DataSet([]);
+        let edges = new vis.DataSet([]);
+        let network = null;
 
-        const container = document.getElementById('network');
-        const network = new vis.Network(container, {{ nodes, edges }}, {{
-            interaction: {{ hover: true, tooltipDelay: 50, selectConnectedEdges: true, hideEdgesOnDrag: true }},
-            edges: {{ selectionWidth: 2.2, hoverWidth: 1.1 }},
-            physics: {{
-                enabled: true,
-                solver: "barnesHut",
-                barnesHut: {{
-                    gravitationalConstant: -6000,
-                    centralGravity: 0.08,
-                    springLength: 260,
-                    springConstant: 0.015,
-                    damping: 0.90,
-                    avoidOverlap: 1.0
-                }},
-                stabilization: {{ iterations: 90, updateInterval: 10 }}
-            }}
-        }});
-        window.nodes = nodes;
-        window.edges = edges;
-        window.network = network;
+        // Inicialização Assíncrona Não-Bloqueante do Grafo (libera Árvore e Editor imediatamente)
+        function initGraphAsync() {{
+            const container = document.getElementById('network');
+            nodes = new vis.DataSet(getFilteredNodes());
+            edges = new vis.DataSet(getFilteredEdges());
+            window.nodes = nodes;
+            window.edges = edges;
 
-        network.once('stabilizationIterationsDone', () => {{
-            network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
-        }});
+            network = new vis.Network(container, {{ nodes, edges }}, {{
+                interaction: {{ hover: true, tooltipDelay: 50, selectConnectedEdges: true, hideEdgesOnDrag: true }},
+                edges: {{ selectionWidth: 2.2, hoverWidth: 1.1 }},
+                physics: {{
+                    enabled: true,
+                    solver: "barnesHut",
+                    barnesHut: {{
+                        gravitationalConstant: -6000,
+                        centralGravity: 0.08,
+                        springLength: 260,
+                        springConstant: 0.015,
+                        damping: 0.90,
+                        avoidOverlap: 1.0
+                    }},
+                    stabilization: {{ iterations: 40, updateInterval: 10 }}
+                }}
+            }});
+            window.network = network;
 
-        // 1 Clique no Grafo: Apenas consulta e inspeção de dependências (mantém código e árvore intactos)
-        network.on('click', (params) => {{
-            if (params.nodes && params.nodes.length > 0) {{
-                Mediator.inspectOnly(params.nodes[0]);
-            }}
-        }});
+            network.once('stabilizationIterationsDone', () => {{
+                network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
+            }});
 
-        // 2 Cliques no Grafo: Troca ativa de contexto (abre o arquivo no editor e foca na árvore)
-        network.on('doubleClick', (params) => {{
-            if (params.nodes && params.nodes.length > 0) {{
-                Mediator.select(params.nodes[0], 'network');
-            }}
-        }});
+            // 1 Clique no Grafo: Apenas consulta e inspeção de dependências (mantém código e árvore intactos)
+            network.on('click', (params) => {{
+                if (params.nodes && params.nodes.length > 0) {{
+                    Mediator.inspectOnly(params.nodes[0]);
+                }}
+            }});
+
+            // 2 Cliques no Grafo: Troca ativa de contexto (abre o arquivo no editor e foca na árvore)
+            network.on('doubleClick', (params) => {{
+                if (params.nodes && params.nodes.length > 0) {{
+                    Mediator.select(params.nodes[0], 'network');
+                }}
+            }});
+
+            updateNodesCount();
+        }}
+        setTimeout(initGraphAsync, 0);
 
         function refreshGraphData() {{
             const newNodes = getFilteredNodes();
@@ -1765,6 +1780,16 @@ class ArchitectureVisualizer:
         // Inicializa a árvore
         const treeRoot = document.getElementById('tree-root');
         renderTree(rawTree, treeRoot);
+
+        // Auto-carrega o primeiro arquivo para o editor já abrir com código pronto
+        function autoLoadInitialFile() {{
+            const firstFile = rawNodes.find(n => n.type === 'file' && n.file);
+            if (firstFile) {{
+                Mediator.loadCode(firstFile.file, 1);
+                Mediator.highlightInTree(firstFile.id);
+            }}
+        }}
+        autoLoadInitialFile();
 
 
         // 6. Sub-abas de Navegação (Árvore vs Inspetor)
@@ -2309,10 +2334,7 @@ class ArchitectureVisualizer:
 </body>
 </html>
 """
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(html_template)
-
-        return output_path
+        return html_template
 
 
 if __name__ == "__main__":
