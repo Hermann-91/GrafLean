@@ -955,6 +955,10 @@ class ArchitectureVisualizer:
         <!-- Barra de Ferramentas Flutuante do Grafo -->
         <div id="graph-toolbar" style="position:absolute; top:12px; left:16px; z-index:90; display:flex; gap:6px; background:rgba(22,23,27,0.85); backdrop-filter:blur(8px); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center;">
             <button class="sublime-btn" id="btn-collapse-graph" onclick="toggleGraphPanel()" title="Recolher Grafo (Modo Código Tela Cheia)">▶ Ocultar Grafo</button>
+            <select id="select-graph-depth" onchange="setGraphDepth(this.value)" class="sublime-btn" style="background:#141414; color:#f8f8f2; border:1px solid #282828; padding:3px 8px; font-size:11px; border-radius:4px; cursor:pointer; outline:none;" title="Profundidade de Conexões do Grafo">
+                <option value="1" selected>🎯 Fase 1 (Direto)</option>
+                <option value="2">🌐 Fase 2 (Transitivo)</option>
+            </select>
             <span id="graph-nodes-count" style="font-size:11px; color:#a6adc8; align-self:center; margin-left:6px; font-weight:600;">-- nós</span>
             <span style="display:flex; align-items:center; gap:4px; font-size:11px; margin-left:8px; color:#66d9ef;">
                 <span style="display:inline-block; width:12px; height:2px; background:#66d9ef;"></span> ➔ Envio
@@ -1060,11 +1064,13 @@ class ArchitectureVisualizer:
 
         async function fetchLiveUpdate() {{
             try {{
-                const res = await fetch('/api/data');
+                let res = await fetch('/api/data');
+                if (!res.ok) res = await fetch('/api/live-data');
                 if (!res.ok) return;
                 const json = await res.json();
-                if (json.success && json.data) {{
-                    applyLiveUpdate(json.data);
+                const payload = json.data || (json.tree ? json : null);
+                if (payload) {{
+                    applyLiveUpdate(payload);
                 }}
             }} catch (e) {{}}
         }}
@@ -1082,6 +1088,12 @@ class ArchitectureVisualizer:
         rawNodes.forEach(n => allNodesMap.set(n.id, n));
         let physicsRunning = false;
         let currentFocusId = null;
+        let currentGraphDepth = 1;
+
+        function setGraphDepth(depth) {{
+            currentGraphDepth = parseInt(depth, 10) || 1;
+            refreshGraphData();
+        }}
 
         // Mapeia classes contidas em cada arquivo para rotulagem limpa unificada
         const fileClassesMap = new Map();
@@ -1139,8 +1151,8 @@ class ArchitectureVisualizer:
             return null;
         }}
 
-        // Algoritmo de Subgrafo por Vizinhança de até 2 Níveis (Ego-Graph)
-        function getTwoLevelNeighborhood(focusId) {{
+        // Algoritmo de Subgrafo por Vizinhança Adaptativa (Fase 1 ou Fase 2)
+        function getNeighborhood(focusId, depth = currentGraphDepth) {{
             if (!focusId) {{
                 const firstFile = rawNodes.find(n => n.type === "file");
                 if (firstFile) focusId = firstFile.id;
@@ -1170,18 +1182,20 @@ class ArchitectureVisualizer:
 
             const level1All = new Set([...level1Outbound, ...level1Inbound]);
 
-            // Nível 2: Vizinhos de 2º grau
-            rawEdges.forEach(e => {{
-                const src = resolveToGraphNodeId(e.source);
-                const tgt = resolveToGraphNodeId(e.target);
-                if (!src || !tgt || src === tgt) return;
-                if (level1All.has(src) && tgt !== focalGId && !level1All.has(tgt)) {{
-                    graphNodeIds.add(tgt);
-                }}
-                if (level1All.has(tgt) && src !== focalGId && !level1All.has(src)) {{
-                    graphNodeIds.add(src);
-                }}
-            }});
+            // Nível 2 (Fase 2): Vizinhos de 2º grau (apenas se depth >= 2)
+            if (depth >= 2) {{
+                rawEdges.forEach(e => {{
+                    const src = resolveToGraphNodeId(e.source);
+                    const tgt = resolveToGraphNodeId(e.target);
+                    if (!src || !tgt || src === tgt) return;
+                    if (level1All.has(src) && tgt !== focalGId && !level1All.has(tgt)) {{
+                        graphNodeIds.add(tgt);
+                    }}
+                    if (level1All.has(tgt) && src !== focalGId && !level1All.has(src)) {{
+                        graphNodeIds.add(src);
+                    }}
+                }});
+            }}
 
             // Arestas do subgrafo com cores semânticas (Azul = Envio, Laranja = Recebe)
             const edgeAggregator = new Map();
@@ -1225,8 +1239,12 @@ class ArchitectureVisualizer:
             return {{ focalId: focalGId, nodeIds: graphNodeIds, level1: level1All, edges: Array.from(edgeAggregator.values()) }};
         }}
 
+        function getTwoLevelNeighborhood(focusId) {{
+            return getNeighborhood(focusId, currentGraphDepth);
+        }}
+
         function getFilteredNodes() {{
-            const sub = getTwoLevelNeighborhood(currentFocusId);
+            const sub = getNeighborhood(currentFocusId, currentGraphDepth);
             if (!sub.focalId || sub.nodeIds.size === 0) return [];
             currentFocusId = sub.focalId;
             const res = [];
@@ -1242,7 +1260,7 @@ class ArchitectureVisualizer:
         }}
 
         function getFilteredEdges() {{
-            const sub = getTwoLevelNeighborhood(currentFocusId);
+            const sub = getNeighborhood(currentFocusId, currentGraphDepth);
             return sub.edges;
         }}
 
@@ -1275,7 +1293,15 @@ class ArchitectureVisualizer:
             network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
         }});
 
+        // 1 Clique no Grafo: Apenas consulta e inspeção de dependências (mantém código e árvore intactos)
         network.on('click', (params) => {{
+            if (params.nodes && params.nodes.length > 0) {{
+                Mediator.inspectOnly(params.nodes[0]);
+            }}
+        }});
+
+        // 2 Cliques no Grafo: Troca ativa de contexto (abre o arquivo no editor e foca na árvore)
+        network.on('doubleClick', (params) => {{
             if (params.nodes && params.nodes.length > 0) {{
                 Mediator.select(params.nodes[0], 'network');
             }}
@@ -1363,6 +1389,16 @@ class ArchitectureVisualizer:
         const Mediator = {{
             selectedId: null,
             currentNode: null,
+
+            // Inspeção sem alteração do editor nem da árvore de arquivos
+            inspectOnly(nodeId) {{
+                if (!nodeId) return;
+                const node = allNodesMap.get(nodeId) || rawNodes.find(n => n.id === nodeId);
+                if (node) {{
+                    this.currentNode = node;
+                    this.updateInspector(node.id);
+                }}
+            }},
 
             select(nodeId, origin) {{
                 if (!nodeId) return;
