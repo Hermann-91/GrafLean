@@ -568,19 +568,7 @@ class ArchitectureVisualizer:
             color: #f92672;
         }}
 
-        /* Legend */
-        .legend {{
-            background: rgba(24, 24, 37, 0.5);
-            padding: 6px 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(69, 71, 90, 0.4);
-            font-size: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }}
-        .legend-item {{ display: flex; align-items: center; gap: 6px; }}
-        .dot {{ width: 8px; height: 8px; border-radius: 50%; }}
+
 
         /* Inspector Details */
         #inspector-content {{
@@ -884,14 +872,7 @@ class ArchitectureVisualizer:
                         <input type="text" class="search-input" id="search" placeholder="Filtrar arquivos ou classes..." oninput="onSearchInput(this.value)">
                     </div>
 
-                    <div class="legend">
-                        <div class="legend-item"><span class="dot" style="background:#f9e2af;"></span> <b>Arquivo (Negrito)</b></div>
-                        <div class="legend-item"><span class="dot" style="background:#89b4fa;"></span> Classe</div>
-                        <div class="legend-item"><span class="dot" style="background:#b4befe;"></span> Interface</div>
-                        <div class="legend-item"><span class="dot" style="background:#a6e3a1;"></span> Método / Função</div>
-                        <div class="legend-item"><span class="git-badge git-badge-new" style="margin:0;">+ Novo</span> Arquivo não rastreado</div>
-                        <div class="legend-item"><span class="git-badge git-badge-mod" style="margin:0;">~ Mod</span> Arquivo modificado</div>
-                    </div>
+
 
                     <div class="tree-container" id="tree-root"></div>
                 </div>
@@ -1439,9 +1420,6 @@ class ArchitectureVisualizer:
             }},
 
             loadCode(filePath, targetLine) {{
-                if (isCodeCollapsed) {{
-                    toggleCodeSubpanel(false);
-                }}
                 currentLoadedFilePath = filePath;
                 const container = document.getElementById('sublime-table-container');
                 const textarea = document.getElementById('sublime-editor-textarea');
