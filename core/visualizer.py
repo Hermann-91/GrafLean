@@ -1083,37 +1083,49 @@ class ArchitectureVisualizer:
         rawNodes.forEach(n => allNodesMap.set(n.id, n));
         let physicsRunning = false;
 
+        // Mapeia classes contidas em cada arquivo para rotulagem limpa unificada
+        const fileClassesMap = new Map();
+        rawNodes.filter(n => (n.type === "class" || n.type === "interface" || n.type === "trait") && n.parentId).forEach(c => {{
+            if (!fileClassesMap.has(c.parentId)) fileClassesMap.set(c.parentId, []);
+            fileClassesMap.get(c.parentId).push(c.label);
+        }});
+
         function formatVisNode(n) {{
-            const isFile = n.type === "file";
-            const labelPrefix = isFile ? "📁 " : (n.type === "interface" ? "📜 " : "🏛️ ");
+            const classes = fileClassesMap.get(n.id) || [];
+            let label = "📁 " + n.label;
+            if (classes.length === 1) {{
+                label = "🏛️ " + classes[0] + "\\n📁 " + n.label;
+            }} else if (classes.length > 1) {{
+                label = "📁 " + n.label + "\\n(" + classes.length + " classes)";
+            }}
+            const hasClasses = classes.length > 0;
             return {{
                 id: n.id,
-                label: isFile ? labelPrefix + n.label : n.label,
-                title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + n.title,
+                label: label,
+                title: n.title + (classes.length ? "\\n🏛️ Classes: " + classes.join(", ") : ""),
                 color: {{
-                    background: isFile ? "#261c14" : "#181825",
-                    border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (isFile ? "#fab387" : "#89b4fa"))
+                    background: hasClasses ? "#1e1e2e" : "#261c14",
+                    border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (hasClasses ? "#89b4fa" : "#fab387"))
                 }},
-                borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (isFile ? 2 : 2.5),
-                shape: isFile ? "box" : "dot",
-                size: isFile ? undefined : 16,
-                shapeProperties: isFile ? {{
-                    borderRadius: 8
-                }} : undefined,
-                margin: isFile ? {{ top: 6, bottom: 6, left: 12, right: 12 }} : undefined,
+                borderWidth: (n.git === "new" || n.git === "modified") ? 2.5 : 2,
+                shape: "dot",
+                size: hasClasses ? 15 : 11,
+                shapeProperties: {{
+                    borderDashes: false
+                }},
                 font: {{
-                    color: isFile ? "#fab387" : "#89b4fa",
-                    size: isFile ? 12 : 11,
+                    color: hasClasses ? "#cdd6f4" : "#fab387",
+                    size: 10,
                     bold: true,
-                    vadjust: isFile ? 0 : 2
+                    vadjust: 0
                 }}
             }};
         }}
 
         function getFilteredNodes() {{
-            // No Grafo entram exclusivamente Células (Arquivos, level 1) e Classes/Interfaces (level 2)
+            // No Grafo cada arquivo/módulo é um Nó Componente Único e Limpo
             return rawNodes
-                .filter(n => n.level === 1 || n.level === 2)
+                .filter(n => n.type === "file")
                 .map(n => formatVisNode(n));
         }}
 
@@ -1124,7 +1136,7 @@ class ArchitectureVisualizer:
                 if (allNodesMap.has(`file://${{id}}`)) return `file://${{id}}`;
                 return null;
             }}
-            if (current.level === 1 || current.level === 2) return current.id;
+            if (current.type === "file") return current.id;
             if (current.parentId && allNodesMap.has(current.parentId)) {{
                 return resolveToGraphNodeId(current.parentId);
             }}
@@ -1140,45 +1152,28 @@ class ArchitectureVisualizer:
             const graphNodeIds = new Set(nodes.getIds());
             const edgeAggregator = new Map();
 
-            // 1. Arestas de Célula: Arquivo engloba a Classe (pertencimento estrutural)
-            rawNodes.filter(n => n.level === 2 && n.parentId && graphNodeIds.has(n.parentId)).forEach(n => {{
-                const key = `${{n.parentId}}->${{n.id}}`;
-                edgeAggregator.set(key, {{
-                    from: n.parentId,
-                    to: n.id,
-                    length: 60,
-                    dashes: [3, 4],
-                    arrows: {{ to: {{ enabled: false }} }},
-                    color: {{ color: "rgba(250, 179, 135, 0.2)", highlight: "#fab387" }},
-                    width: 1.2,
-                    title: "🏛️ Classe contida na célula"
-                }});
-            }});
-
-            // 2. Arestas de Dependência e Chamada (elevadas para Classes e Arquivos)
+            // Arestas de Dependência e Chamada entre Módulos
             rawEdges.forEach(e => {{
                 const src = resolveToGraphNodeId(e.source);
                 const tgt = resolveToGraphNodeId(e.target);
                 if (src && tgt && src !== tgt && graphNodeIds.has(src) && graphNodeIds.has(tgt)) {{
                     const key = `${{src}}->${{tgt}}`;
-                    const srcNode = allNodesMap.get(src);
-                    const isFileLevel = srcNode && srcNode.type === "file";
-                    const edgeColor = isFileLevel ? "rgba(250, 179, 135, 0.7)" : "rgba(137, 180, 250, 0.7)";
-                    const edgeHighlight = isFileLevel ? "#fab387" : "#89b4fa";
+                    const edgeColor = "rgba(137, 180, 250, 0.65)";
+                    const edgeHighlight = "#89b4fa";
                     if (!edgeAggregator.has(key)) {{
                         edgeAggregator.set(key, {{
                             from: src,
                             to: tgt,
                             arrows: {{ to: {{ enabled: true, scaleFactor: 0.8 }} }},
                             color: {{ color: edgeColor, highlight: edgeHighlight }},
-                            width: 1.8,
+                            width: 1.6,
                             count: 1
                         }});
                     }} else {{
                         const existing = edgeAggregator.get(key);
                         if (existing.count) {{
                             existing.count++;
-                            existing.width = Math.min(4, 1.8 + existing.count * 0.4);
+                            existing.width = Math.min(4.5, 1.6 + existing.count * 0.4);
                             existing.title = `${{existing.count}} conexões/chamadas`;
                         }}
                     }}
@@ -1210,59 +1205,6 @@ class ArchitectureVisualizer:
         window.nodes = nodes;
         window.edges = edges;
         window.network = network;
-
-        // 2. Renderização da Membrana Celular (Arquivo englobando Classes)
-        network.on("beforeDrawing", function(ctx) {{
-            const graphNodeIds = new Set(nodes.getIds());
-            const fileClassesMap = new Map();
-
-            rawNodes.filter(n => (n.type === "class" || n.type === "interface" || n.type === "trait") && n.parentId && graphNodeIds.has(n.parentId)).forEach(c => {{
-                if (!fileClassesMap.has(c.parentId)) fileClassesMap.set(c.parentId, []);
-                fileClassesMap.get(c.parentId).push(c.id);
-            }});
-
-            fileClassesMap.forEach((classIds, fileId) => {{
-                const nodeIds = [fileId, ...classIds];
-                const positions = network.getPositions(nodeIds);
-                const validPositions = nodeIds.map(id => positions[id]).filter(Boolean);
-                if (validPositions.length === 0) return;
-
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                validPositions.forEach(p => {{
-                    if (p.x < minX) minX = p.x;
-                    if (p.x > maxX) maxX = p.x;
-                    if (p.y < minY) minY = p.y;
-                    if (p.y > maxY) maxY = p.y;
-                }});
-
-                const paddingX = 35;
-                const paddingY = 28;
-                const boxX = minX - paddingX;
-                const boxY = minY - paddingY;
-                const boxW = (maxX - minX) + (paddingX * 2);
-                const boxH = (maxY - minY) + (paddingY * 2);
-
-                ctx.save();
-                ctx.beginPath();
-                if (typeof ctx.roundRect === "function") {{
-                    ctx.roundRect(boxX, boxY, boxW, boxH, 20);
-                }} else {{
-                    ctx.rect(boxX, boxY, boxW, boxH);
-                }}
-                ctx.fillStyle = "rgba(250, 179, 135, 0.04)";
-                ctx.fill();
-                ctx.strokeStyle = "rgba(250, 179, 135, 0.6)";
-                ctx.lineWidth = 2.2;
-                ctx.setLineDash([8, 6]);
-                ctx.stroke();
-
-                ctx.font = "bold 10px -apple-system, sans-serif";
-                ctx.fillStyle = "rgba(250, 179, 135, 0.85)";
-                ctx.textAlign = "left";
-                ctx.fillText("CÉLULA MODULAR", boxX + 12, boxY + 14);
-                ctx.restore();
-            }});
-        }});
 
         network.once('stabilizationIterationsDone', () => {{
             network.setOptions({{ physics: {{ enabled: false }} }});
@@ -1396,12 +1338,12 @@ class ArchitectureVisualizer:
 
                 // A. Sincroniza o Grafo Vis.js
                 if (origin !== 'network') {{
-                    const existsInGraph = nodes.get(nodeId);
-                    if (existsInGraph) {{
-                        network.selectNodes([nodeId]);
-                        network.focus(nodeId, {{
+                    const targetGraphId = resolveToGraphNodeId(nodeId);
+                    if (targetGraphId && nodes.get(targetGraphId)) {{
+                        network.selectNodes([targetGraphId]);
+                        network.focus(targetGraphId, {{
                             scale: 1.1,
-                            animation: {{ duration: 500, easingFunction: 'easeInOutQuad' }}
+                            animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }}
                         }});
                     }}
                 }}
