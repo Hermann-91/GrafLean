@@ -163,7 +163,7 @@ class ProjectGraph:
         return graph
 
     def find_symbol(self, symbol_name: str, file_path: Optional[str] = None) -> Optional[Node]:
-        """Busca em O(1) pelo símbolo (para atender ao orçamento de latência do Sublime)."""
+        """Busca em O(1) pelo símbolo para latência instantânea (< 15ms)."""
         # 1. Busca exata por FQCN ou ID
         if symbol_name in self.nodes:
             return self.nodes[symbol_name]

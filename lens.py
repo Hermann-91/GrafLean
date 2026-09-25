@@ -21,6 +21,11 @@ def print_help():
 🏛️ GrafLean — Architecture & Agent Orchestration CLI
 
 Uso:
+  python3 lens.py                                      # Inicia o Hub Central e abre no navegador (localhost:7357)
+  python3 lens.py hub [--port PORTA] [--no-browser]    # Inicia o servidor do Hub Central
+  python3 lens.py add <diretorio> [--name NOME] [--no-ai] # Registra projeto na biblioteca central
+  python3 lens.py list                                 # Lista os projetos cadastrados na biblioteca
+  python3 lens.py rm <id_do_projeto>                   # Remove um projeto da biblioteca
   python3 lens.py scan [diretorio]                     # Escaneia o projeto e gera .arch_graph.json
   python3 lens.py map [diretorio]                      # Gera o mapa interativo arch_map.html e abre no navegador
   python3 lens.py watch [diretorio]                    # Modo vigilante: Live-reload e API ativa em tempo real
@@ -34,14 +39,85 @@ Uso:
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help", "help"):
+    if len(sys.argv) < 2:
+        print("🏛️ Iniciando GrafLean Hub (Workspace Centralizado & PWA)...")
+        from core.hub_server import HubServer
+        hub = HubServer(port=7357)
+        hub.start(block=True, open_browser=True)
+        return
+
+    if sys.argv[1] in ("-h", "--help", "help"):
         print_help()
         return
 
     cmd = sys.argv[1]
     target_dir = sys.argv[2] if len(sys.argv) > 2 and not sys.argv[2].startswith("-") else "."
 
-    if cmd == "scan":
+    if cmd == "hub":
+        port = 7357
+        if "--port" in sys.argv:
+            idx = sys.argv.index("--port")
+            if idx + 1 < len(sys.argv):
+                port = int(sys.argv[idx + 1])
+        open_browser = "--no-browser" not in sys.argv
+        print(f"🏛️ GrafLean Hub ativo em: http://127.0.0.1:{port}")
+        from core.hub_server import HubServer
+        hub = HubServer(port=port)
+        hub.start(block=True, open_browser=open_browser)
+
+    elif cmd == "add":
+        if len(sys.argv) < 3:
+            print("Uso: python3 lens.py add <diretorio> [--name Nome] [--no-ai]")
+            return
+        proj_path = sys.argv[2]
+        proj_name = None
+        if "--name" in sys.argv:
+            n_idx = sys.argv.index("--name")
+            if n_idx + 1 < len(sys.argv):
+                proj_name = sys.argv[n_idx + 1]
+        ai_acc = "--no-ai" not in sys.argv
+        from core.hub_server import HubManager
+        manager = HubManager()
+        try:
+            meta = manager.register_and_index(proj_path, name=proj_name, ai_accelerator=ai_acc)
+            print(f"✅ Projeto '{meta.name}' cadastrado com sucesso no Hub!")
+            print(f"  • ID: {meta.id}")
+            print(f"  • Caminho: {meta.path}")
+            print(f"  • Modo: {'⚡ Acelerador de IA (.graflean/)' if meta.ai_accelerator else '🛡️ Zero-Footprint'}")
+            print(f"  • Estatísticas: {meta.node_count} nós, {meta.edge_count} conexões.")
+        except Exception as e:
+            print(f"❌ Erro ao cadastrar projeto: {e}")
+
+    elif cmd in ("list", "ls"):
+        from core.library import LibraryManager
+        lib = LibraryManager()
+        projects = lib.list_projects()
+        if not projects:
+            print("📁 Nenhum projeto cadastrado na biblioteca. Use: python3 lens.py add <diretorio>")
+            return
+        print(f"\n🏛️ Projetos Cadastrados no GrafLean Hub ({len(projects)}):")
+        print("-" * 75)
+        for p in projects:
+            mode = "⚡ IA Ativo" if p.ai_accelerator else "🛡️ Zero-Footprint"
+            cycles = "⚠️ Ciclos" if p.has_cycles else "✅ Acíclico"
+            print(f"• [{p.id}] {p.name}")
+            print(f"  Caminho: {p.path}")
+            print(f"  Modo: {mode} | Nós: {p.node_count} | Conexões: {p.edge_count} | I: {p.avg_instability} | {cycles}")
+            print("-" * 75)
+
+    elif cmd == "rm":
+        if len(sys.argv) < 3:
+            print("Uso: python3 lens.py rm <id_do_projeto>")
+            return
+        proj_id = sys.argv[2]
+        from core.hub_server import HubManager
+        manager = HubManager()
+        if manager.remove_project(proj_id, purge_local_folder=True):
+            print(f"🗑️ Projeto '{proj_id}' removido com sucesso da biblioteca!")
+        else:
+            print(f"❌ Projeto com ID '{proj_id}' não encontrado.")
+
+    elif cmd == "scan":
         print(f"🔍 Escaneando arquitetura em: {os.path.abspath(target_dir)}")
         g = ProjectGraph(target_dir)
         g.scan_project()

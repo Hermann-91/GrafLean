@@ -85,3 +85,24 @@ class Edge:
     def from_dict(cls, data: Dict[str, Any]) -> Edge:
         edge_type = EdgeType(data.pop("edge_type"))
         return cls(edge_type=edge_type, **data)
+
+
+@dataclass
+class ProjectMetadata:
+    id: str                                # Identificador único determinístico (slug/hash)
+    name: str                              # Nome amigável do projeto
+    path: str                              # Caminho absoluto no disco
+    ai_accelerator: bool = True            # Se True, sincroniza .graflean/ local para IA
+    last_scanned: Optional[str] = None     # Timestamp ISO da última varredura
+    node_count: int = 0                    # Total de nós indexados
+    edge_count: int = 0                    # Total de conexões mapeadas
+    avg_instability: float = 0.0           # Instabilidade média do sistema (I)
+    has_cycles: bool = False               # Alerta de dependências circulares globais
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> ProjectMetadata:
+        return cls(**data)
+
