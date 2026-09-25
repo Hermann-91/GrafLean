@@ -958,10 +958,9 @@ class ArchitectureVisualizer:
     <div id="network-container" style="flex:1; position:relative; height:100%; width:100%;">
         <!-- Barra de Ferramentas Flutuante do Grafo -->
         <div id="graph-toolbar" style="position:absolute; top:12px; left:16px; z-index:90; display:flex; gap:6px; background:rgba(22,23,27,0.85); backdrop-filter:blur(8px); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center;">
-            <button class="sublime-btn" id="btn-mode-auto" onclick="setGraphMode('auto')" style="background:#272822; color:#a6e22e; border-color:#a6e22e;" title="Foco Inteligente: Nós criados pela IA abertos e código estável agrupado">✨ Foco Inteligente</button>
-            <button class="sublime-btn" id="btn-mode-arch" onclick="setGraphMode('arch')" title="Somente Arquivos e Classes">🏛️ Arquitetura</button>
-            <button class="sublime-btn" id="btn-mode-all" onclick="setGraphMode('all')" title="Abrir Todos os Nós">🔬 Abrir Tudo</button>
+            <button class="sublime-btn" id="btn-reorganize" onclick="reorganizeGraph()" title="Reorganizar Layout do Grafo Suavemente">🔄 Reorganizar</button>
             <button class="sublime-btn" id="btn-physics" onclick="togglePhysics()" title="Alternar Física de Colisão">⚡ Física: Off</button>
+            <button class="sublime-btn" id="btn-fit" onclick="resetGraphView()" title="Centralizar e Enquadrar Todos os Nós">🔍 Enquadrar</button>
             <button class="sublime-btn" id="btn-collapse-graph" onclick="toggleGraphPanel()" title="Recolher Grafo (Modo Código Tela Cheia)">▶ Ocultar Grafo</button>
             <span id="graph-nodes-count" style="font-size:11px; color:#a6adc8; align-self:center; margin-left:6px; font-weight:600;">-- nós</span>
         </div>
@@ -1079,67 +1078,107 @@ class ArchitectureVisualizer:
             "file": "#f9e2af"
         }};
 
-        // 1. Vis.js Network Setup com Hierarquia e Foco Inteligente
+        // 1. Vis.js Network Setup com Células Modulares e Física Pacificada
         const allNodesMap = new Map();
         rawNodes.forEach(n => allNodesMap.set(n.id, n));
-        const expandedNodes = new Set();
-        let currentViewMode = 'auto'; // 'auto' | 'arch' | 'all'
         let physicsRunning = false;
 
         function formatVisNode(n) {{
+            const isFile = n.type === "file";
+            const labelPrefix = isFile ? "📁 " : (n.type === "interface" ? "📜 " : "🏛️ ");
             return {{
                 id: n.id,
-                label: n.label,
+                label: labelPrefix + n.label,
                 title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + n.title,
                 color: {{
-                    background: n.type === "file" ? "#2a281e" : (colorMap[n.type] || "#cdd6f4"),
-                    border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (n.type === "file" ? "#f9e2af" : (n.cycle ? "#f38ba8" : (n.deep ? "#a6e3a1" : "#45475a"))))
+                    background: isFile ? "#181825" : "#1e1e2e",
+                    border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (isFile ? "#f9e2af" : (colorMap[n.type] || "#89b4fa")))
                 }},
-                borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (n.type === "file" ? 2 : (n.cycle ? 3 : 1)),
-                size: Math.max(12, Math.min(30, 10 + n.ca * 3)),
-                shape: n.type === "file" ? "box" : "dot",
+                borderWidth: (n.git === "new" || n.git === "modified") ? 3 : 2,
+                shape: "box",
+                shapeProperties: {{
+                    borderRadius: isFile ? 8 : 4
+                }},
+                margin: isFile ? {{ top: 10, bottom: 10, left: 14, right: 14 }} : {{ top: 6, bottom: 6, left: 10, right: 10 }},
                 font: {{
-                    color: n.type === "file" ? "#f9e2af" : "#cdd6f4",
-                    size: n.type === "file" ? 11 : 12,
-                    bold: n.type === "file"
+                    color: isFile ? "#f9e2af" : (colorMap[n.type] || "#89b4fa"),
+                    size: isFile ? 13 : 11,
+                    bold: true
                 }}
             }};
         }}
 
         function getFilteredNodes() {{
-            const visible = [];
-            const isSmall = rawNodes.length <= 150;
+            // No Grafo entram exclusivamente Células (Arquivos, level 1) e Classes/Interfaces (level 2)
+            return rawNodes
+                .filter(n => n.level === 1 || n.level === 2)
+                .map(n => formatVisNode(n));
+        }}
 
-            rawNodes.forEach(n => {{
-                if (currentViewMode === 'all' || isSmall) {{
-                    visible.push(formatVisNode(n));
-                }} else if (currentViewMode === 'arch') {{
-                    if (n.level <= 2) visible.push(formatVisNode(n));
-                }} else {{
-                    // Modo 'auto' (Foco Inteligente):
-                    if (n.level <= 2) {{
-                        visible.push(formatVisNode(n));
-                    }} else if (n.level === 3) {{
-                        if (n.git === 'new' || n.git === 'modified' || (n.parentId && expandedNodes.has(n.parentId))) {{
-                            visible.push(formatVisNode(n));
-                        }}
-                    }}
-                }}
-            }});
-            return visible;
+        function resolveToGraphNodeId(id) {{
+            if (!id) return null;
+            let current = allNodesMap.get(id);
+            if (!current) {{
+                if (allNodesMap.has(`file://${{id}}`)) return `file://${{id}}`;
+                return null;
+            }}
+            if (current.level === 1 || current.level === 2) return current.id;
+            if (current.parentId && allNodesMap.has(current.parentId)) {{
+                return resolveToGraphNodeId(current.parentId);
+            }}
+            if (current.file && allNodesMap.has(`file://${{current.file}}`)) {{
+                return `file://${{current.file}}`;
+            }}
+            return null;
         }}
 
         const nodes = new vis.DataSet(getFilteredNodes());
 
         function getFilteredEdges() {{
-            const currentIds = new Set(nodes.getIds());
-            return rawEdges.filter(e => currentIds.has(e.source) && currentIds.has(e.target)).map(e => ({{
-                from: e.source,
-                to: e.target,
-                arrows: "to",
-                color: {{ color: "#45475a", highlight: "#89b4fa" }},
-                width: 1
-            }}));
+            const graphNodeIds = new Set(nodes.getIds());
+            const edgeAggregator = new Map();
+
+            // 1. Arestas de Célula: Arquivo engloba a Classe (pertencimento estrutural)
+            rawNodes.filter(n => n.level === 2 && n.parentId && graphNodeIds.has(n.parentId)).forEach(n => {{
+                const key = `${{n.parentId}}->${{n.id}}`;
+                edgeAggregator.set(key, {{
+                    from: n.parentId,
+                    to: n.id,
+                    dashes: [4, 4],
+                    arrows: {{ to: {{ enabled: false }} }},
+                    color: {{ color: "rgba(249, 226, 175, 0.35)", highlight: "#f9e2af" }},
+                    width: 1.5,
+                    title: "🏛️ Classe contida no arquivo"
+                }});
+            }});
+
+            // 2. Arestas de Dependência e Chamada (elevadas para Classes e Arquivos)
+            rawEdges.forEach(e => {{
+                const src = resolveToGraphNodeId(e.source);
+                const tgt = resolveToGraphNodeId(e.target);
+                if (src && tgt && src !== tgt && graphNodeIds.has(src) && graphNodeIds.has(tgt)) {{
+                    const key = `${{src}}->${{tgt}}`;
+                    if (!edgeAggregator.has(key)) {{
+                        edgeAggregator.set(key, {{
+                            from: src,
+                            to: tgt,
+                            arrows: {{ to: {{ enabled: true, scaleFactor: 0.8 }} }},
+                            color: {{ color: "rgba(137, 180, 250, 0.45)", highlight: "#89b4fa" }},
+                            width: 1.5,
+                            count: 1
+                        }});
+                    }} else {{
+                        const existing = edgeAggregator.get(key);
+                        if (existing.count) {{
+                            existing.count++;
+                            existing.width = Math.min(4, 1.5 + existing.count * 0.4);
+                            existing.title = `${{existing.count}} conexões/chamadas`;
+                        }}
+                    }}
+                }}
+            }});
+
+            return Array.from(edgeAggregator.values());
         }}
 
         const edges = new vis.DataSet(getFilteredEdges());
@@ -1149,9 +1188,16 @@ class ArchitectureVisualizer:
             interaction: {{ hover: true, tooltipDelay: 50, selectConnectedEdges: true, hideEdgesOnDrag: true }},
             physics: {{
                 enabled: true,
-                solver: "forceAtlas2Based",
-                forceAtlas2Based: {{ gravitationalConstant: -55, centralGravity: 0.01, springLength: 95 }},
-                stabilization: {{ iterations: 35, updateInterval: 10 }}
+                solver: "barnesHut",
+                barnesHut: {{
+                    gravitationalConstant: -2500,
+                    centralGravity: 0.2,
+                    springLength: 120,
+                    springConstant: 0.04,
+                    damping: 0.85,
+                    avoidOverlap: 0.7
+                }},
+                stabilization: {{ iterations: 60, updateInterval: 10 }}
             }}
         }});
         window.nodes = nodes;
@@ -1162,20 +1208,12 @@ class ArchitectureVisualizer:
             network.setOptions({{ physics: {{ enabled: false }} }});
             physicsRunning = false;
             updatePhysicsUI();
+            network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
         }});
 
         network.on('click', (params) => {{
             if (params.nodes && params.nodes.length > 0) {{
-                const clickedId = params.nodes[0];
-                const n = allNodesMap.get(clickedId);
-                if (n && (n.level === 1 || n.level === 2)) {{
-                    if (expandedNodes.has(clickedId)) {{
-                        expandedNodes.delete(clickedId);
-                    }} else {{
-                        expandedNodes.add(clickedId);
-                    }}
-                    refreshGraphData();
-                }}
+                Mediator.select(params.nodes[0], 'network');
             }}
         }});
 
@@ -1188,20 +1226,19 @@ class ArchitectureVisualizer:
             updateNodesCount();
         }}
 
-        function setGraphMode(mode) {{
-            currentViewMode = mode;
-            document.querySelectorAll('#graph-toolbar .sublime-btn').forEach(b => {{
-                b.style.borderColor = '';
-                b.style.color = '';
-                b.style.background = '';
-            }});
-            const activeBtn = document.getElementById(`btn-mode-${{mode}}`);
-            if (activeBtn) {{
-                activeBtn.style.borderColor = '#a6e22e';
-                activeBtn.style.color = '#a6e22e';
-                activeBtn.style.background = '#272822';
-            }}
-            refreshGraphData();
+        function reorganizeGraph() {{
+            network.setOptions({{ physics: {{ enabled: true }} }});
+            network.stabilize(50);
+            setTimeout(() => {{
+                network.setOptions({{ physics: {{ enabled: false }} }});
+                physicsRunning = false;
+                updatePhysicsUI();
+                network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
+            }}, 350);
+        }}
+
+        function resetGraphView() {{
+            network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
         }}
 
         function togglePhysics() {{
@@ -1646,12 +1683,6 @@ class ArchitectureVisualizer:
         const treeRoot = document.getElementById('tree-root');
         renderTree(rawTree, treeRoot);
 
-        // 5. Eventos do Grafo Vis.js
-        network.on("click", function(params) {{
-            if (params.nodes.length > 0) {{
-                Mediator.select(params.nodes[0], 'network');
-            }}
-        }});
 
         // 6. Sub-abas de Navegação (Árvore vs Inspetor)
         function switchNavTab(tab) {{
