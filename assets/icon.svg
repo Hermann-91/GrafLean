@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141517"/>
+      <stop offset="100%" stop-color="#0c0d0e"/>
+    </linearGradient>
+    <linearGradient id="neon-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#66d9ef"/>
+      <stop offset="100%" stop-color="#a6e22e"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Fundo com cantos arredondados -->
+  <rect width="512" height="512" rx="110" fill="url(#bg-grad)" stroke="#272822" stroke-width="8"/>
+
+  <!-- Conexões do Grafo -->
+  <g stroke="#49483e" stroke-width="6" stroke-linecap="round" stroke-dasharray="8,6">
+    <line x1="256" y1="120" x2="140" y2="270" />
+    <line x1="256" y1="120" x2="372" y2="270" />
+    <line x1="140" y1="270" x2="256" y2="390" />
+    <line x1="372" y1="270" x2="256" y2="390" />
+    <line x1="140" y1="270" x2="372" y2="270" stroke="#f92672" stroke-width="4" stroke-dasharray="none" />
+  </g>
+
+  <!-- Nós do Grafo Arquitetural -->
+  <!-- Top Node -->
+  <circle cx="256" cy="120" r="32" fill="#1e1f1c" stroke="#a6e22e" stroke-width="8" filter="url(#glow)"/>
+  <!-- Left Node -->
+  <circle cx="140" cy="270" r="28" fill="#1e1f1c" stroke="#66d9ef" stroke-width="8" filter="url(#glow)"/>
+  <!-- Right Node -->
+  <circle cx="372" cy="270" r="28" fill="#1e1f1c" stroke="#fd971f" stroke-width="8" filter="url(#glow)"/>
+  <!-- Bottom Center Node -->
+  <circle cx="256" cy="390" r="34" fill="#1e1f1c" stroke="#f92672" stroke-width="8" filter="url(#glow)"/>
+
+  <!-- Letra G / Símbolo Central em Lente -->
+  <text x="256" y="280" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="82" fill="url(#neon-cyan)" text-anchor="middle" dominant-baseline="central">G</text>
+</svg>
