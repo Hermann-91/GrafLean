@@ -1167,7 +1167,7 @@ class ArchitectureVisualizer:
                             color: {{
                                 color: "rgba(108, 112, 134, 0.28)",
                                 highlight: "#89b4fa",
-                                hover: "#89b4fa",
+                                hover: "rgba(137, 180, 250, 0.45)",
                                 inherit: false
                             }},
                             smooth: {{ enabled: true, type: "continuous", roundness: 0.35 }},
@@ -1193,7 +1193,7 @@ class ArchitectureVisualizer:
         const container = document.getElementById('network');
         const network = new vis.Network(container, {{ nodes, edges }}, {{
             interaction: {{ hover: true, tooltipDelay: 50, selectConnectedEdges: true, hideEdgesOnDrag: true }},
-            edges: {{ selectionWidth: 2.2, hoverWidth: 1.5 }},
+            edges: {{ selectionWidth: 2.2, hoverWidth: 1.1 }},
             physics: {{
                 enabled: true,
                 solver: "barnesHut",
