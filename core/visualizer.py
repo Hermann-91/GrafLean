@@ -861,6 +861,9 @@ class ArchitectureVisualizer:
                 <button class="sublime-btn" id="btn-reopen-nav" onclick="toggleNavSubpanel()" style="display:none;" title="Mostrar Árvore/Inspetor">
                     📁 Navegador
                 </button>
+                <button class="sublime-btn" id="btn-reopen-code" onclick="toggleCodeSubpanel()" style="display:none;" title="Mostrar Editor de Código">
+                    📄 Código
+                </button>
             </div>
         </div>
 
@@ -947,11 +950,13 @@ class ArchitectureVisualizer:
                         <div class="sublime-file-tab">
                             <span>📄</span>
                             <span id="sublime-tab-filename">Nenhum arquivo</span>
+                            <span onclick="toggleCodeSubpanel()" title="Recolher Editor de Código" style="cursor:pointer; opacity:0.6; margin-left:6px; font-size:11px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">✕</span>
                         </div>
                         <div class="sublime-toolbar-actions">
                             <button class="sublime-btn" id="btn-toggle-edit" onclick="toggleEditMode()" title="Alternar entre Leitura e Edição">✏️ Editar</button>
                             <button class="sublime-btn" id="btn-save-code" onclick="saveCurrentCode()" style="display:none; background:#a6e22e; color:#11111b; font-weight:700; border-color:#a6e22e;" title="Salvar Alterações no Disco (Ctrl+S)">💾 Salvar</button>
                             <button class="sublime-btn" onclick="copyCurrentCode()" title="Copiar Código">📋 Copiar</button>
+                            <button class="sublime-btn" id="btn-collapse-code" onclick="toggleCodeSubpanel()" title="Recolher Editor de Código (Focar na Árvore e Grafo)">◀ Recolher</button>
                         </div>
                     </div>
 
@@ -1434,6 +1439,9 @@ class ArchitectureVisualizer:
             }},
 
             loadCode(filePath, targetLine) {{
+                if (isCodeCollapsed) {{
+                    toggleCodeSubpanel(false);
+                }}
                 currentLoadedFilePath = filePath;
                 const container = document.getElementById('sublime-table-container');
                 const textarea = document.getElementById('sublime-editor-textarea');
@@ -1707,6 +1715,42 @@ class ArchitectureVisualizer:
             const isHidden = nav.classList.contains('hidden');
             resizer.style.display = isHidden ? 'none' : 'block';
             btnReopen.style.display = isHidden ? 'inline-flex' : 'none';
+        }}
+
+        // 7. Alterna visibilidade do Sub-Painel de Código (Recolher / Expandir)
+        let isCodeCollapsed = false;
+        let savedSidebarWidthBeforeCollapse = null;
+
+        function toggleCodeSubpanel(forceState) {{
+            const editor = document.getElementById('editor-subpanel');
+            const resizer = document.getElementById('internal-resizer');
+            const btnReopenCode = document.getElementById('btn-reopen-code');
+            const navSubpanel = document.getElementById('nav-subpanel');
+            const sidebar = document.getElementById('sidebar');
+
+            if (typeof forceState === 'boolean') {{
+                isCodeCollapsed = forceState;
+            }} else {{
+                isCodeCollapsed = !isCodeCollapsed;
+            }}
+
+            if (isCodeCollapsed) {{
+                editor.style.display = 'none';
+                resizer.style.display = 'none';
+                btnReopenCode.style.display = 'inline-flex';
+                savedSidebarWidthBeforeCollapse = sidebar.offsetWidth;
+                const navW = navSubpanel ? (navSubpanel.offsetWidth || 300) : 300;
+                updateSidebarWidth(navW + 2);
+            }} else {{
+                editor.style.display = 'flex';
+                if (!navSubpanel.classList.contains('hidden')) {{
+                    resizer.style.display = 'block';
+                }}
+                btnReopenCode.style.display = 'none';
+                const targetW = savedSidebarWidthBeforeCollapse || 680;
+                updateSidebarWidth(Math.max(500, targetW));
+            }}
+            if (window.network) setTimeout(() => network.redraw(), 100);
         }}
 
         // Alterna visibilidade da barra lateral inteira
