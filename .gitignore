@@ -10,3 +10,6 @@ arch_map.html
 # IDEs
 .vscode/
 .idea/
+
+# GrafLean AI Context Accelerator
+.graflean/

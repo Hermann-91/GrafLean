@@ -1,5 +1,7 @@
 # Plano de Ação: Sublime Architecture Lens 🔍🏛️
 
+> **Nota de Contexto (Concluído/Histórico):** A integração como plugin do Sublime Text serviu como protótipo inicial (Fase 1). O projeto evoluiu para o **GrafLean**, uma IDE autônoma de alta performance e Hub PWA independente de editores externos (consulte `doc/plano_graflean_hub_pwa.md`).
+
 ## 1. Visão Geral e Objetivo
 O **Sublime Architecture Lens** é uma ferramenta de produtividade e engenharia de software para o **Sublime Text**, projetada para desenvolvedores com raciocínio sistêmico top-down (pensamento em teia). Inspirada nas melhores capacidades de análise estática do *Graphify* e nos livros clássicos de arquitetura (*Arquitetura Limpa* e *A Philosophy of Software Design*), a ferramenta funciona como uma lente de raio-X arquitetural:
 

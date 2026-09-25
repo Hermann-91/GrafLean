@@ -125,4 +125,4 @@ OK
 ## 🛡️ Integridade e Privacidade
 * **Zero Dependências Externas:** 100% biblioteca padrão do Python (`json`, `ast`, `http.server`, `threading`, `socketserver`).
 * **Privacidade Absoluta:** O código nunca sai da sua máquina local.
-* **Editor Sublime Text Intocado:** Nenhuma alteração é realizada em seus binários ou arquivos de configuração do Sublime.
+* **Zero Footprint no Sistema:** Nenhum arquivo ou configuração global de terceiros é alterada indevidamente.

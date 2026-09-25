@@ -5,22 +5,22 @@ Este documento define as diretrizes técnicas, arquiteturais e comportamentais p
 ---
 
 ## 1. Missão Primordial do Projeto
-Construir uma ferramenta de alta performance para o **Sublime Text** que elimine a sobrecarga cognitiva da navegação em sistemas complexos, fornecendo visualização instantânea de arquitetura, relações entre arquivos, classes e funções, e métricas de acoplamento via hover e mapas top-down.
+Construir uma **Architecture-First IDE & Hub Centralizado (PWA Local)** de alta performance que elimine a sobrecarga cognitiva da navegação em sistemas complexos, fornecendo visualização instantânea de arquitetura, relações entre arquivos, classes e funções, e métricas de acoplamento em tempo real.
 
 ---
 
 ## 2. Princípios de Atuação e Regras Não-Negociáveis ⚠️
 
-### 1. Orçamento Rigoroso de Latência (< 15ms no Hover)
-- O evento `on_hover` do Sublime Text é sensível. Qualquer congelamento estraga a experiência de digitação.
+### 1. Orçamento Rigoroso de Latência (< 15ms)
+- Respostas e renderização da árvore e nós de código devem ser instantâneas.
 - **Regra de Ouro:** NUNCA faça I/O de disco pesado, consultas de rede ou extrações complexas durante a execução do hover.
-- O grafo (`.arch_graph.json`) deve ser carregado em memória no startup ou atualizado em thread secundária assíncrona (`sublime.set_timeout_async`).
+- O grafo deve ser carregado em memória no startup ou atualizado em thread secundária assíncrona.
 - A busca por símbolo durante o hover deve ter complexidade $O(1)$.
 
 ### 2. Separação Estrita de Responsabilidades (Clean Architecture)
-- O diretório `core/` é o núcleo da aplicação e **NÃO PODE DEPENDER** de APIs do Sublime Text (`sublime`, `sublime_plugin`).
-- O `core/` deve ser executável via CLI independente e 100% testável com `pytest`.
-- O arquivo `architecture_lens.py` na raiz atua puramente como **Camada de Apresentação (View/Adapter)**, consumindo o `core/` e renderizando mini-HTML.
+- O diretório `core/` é o núcleo da aplicação e **NÃO PODE DEPENDER** de bibliotecas externas ou frameworks de terceiros.
+- O `core/` deve ser executável via CLI independente e 100% testável com `unittest`.
+- Camadas de apresentação (Web UI / PWA / CLI) apenas consomem o `core/` sem vazar lógica de domínio.
 
 ### 3. Honestidade e Precisão do Grafo (Regra Graphify)
 - O extrator sintático nunca deve inventar conexões hipotéticas.
@@ -35,7 +35,7 @@ Construir uma ferramenta de alta performance para o **Sublime Text** que elimine
   2. *Quem o chama? (Inbound / Ca)*
   3. *Do que ele depende? (Outbound / Ce)*
   4. *Qual é o diagnóstico de saúde arquitetural?*
-- Links clicáveis dentro do pop-up devem navegar imediatamente para o arquivo e linha de destino no Sublime Text.
+- Links clicáveis na interface de árvore e grafo devem navegar imediatamente para o arquivo e linha de destino no editor integrado.
 
 ### 5. Qualidade e Testes Contínuos (TDD)
 - Todo parser, modelo e analisador de métricas deve conter cobertura de testes em `tests/`.
@@ -45,5 +45,5 @@ Construir uma ferramenta de alta performance para o **Sublime Text** que elimine
 
 ## 3. Modos de Operação do Agente
 1. **Modo Planejador / Arquiteto:** Antes de codificar um componente, detalha interfaces e fluxos no formato Clean Code / SOLID.
-2. **Modo Implementador:** Código tipado, limpo, modular e com tratamento gracioso de erros (sem quebrar o Sublime Text caso um arquivo tenha erro de sintaxe).
+2. **Modo Implementador:** Código tipado, limpo, modular e com tratamento gracioso de erros (sem quebrar a renderização caso um arquivo tenha erro de sintaxe).
 3. **Modo Validador:** Execução de `pytest` e checagem de integridade das arestas antes de considerar uma tarefa concluída.
