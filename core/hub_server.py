@@ -25,7 +25,7 @@ from core.models import ProjectMetadata
 from core.library import LibraryManager
 from core.graph import ProjectGraph
 from core.visualizer import ArchitectureVisualizer
-from core.creator import create_folder, create_markdown_spec, rename_resource, delete_resource
+from core.creator import create_folder, create_file, create_markdown_spec, rename_resource, delete_resource
 
 
 class ThreadedHubServer(ThreadingMixIn, HTTPServer):
@@ -428,13 +428,13 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                     session.clients.discard(self)
             return
 
-        # Rota 6: API de Live Data (/api/live-data)
-        if path == "/api/live-data":
+        # Rota 6: API de Live Data (/api/data e /api/live-data)
+        if path in ("/api/data", "/api/live-data"):
             session = self._get_project_context()
             if not session:
                 self._send_json(404, {"error": "Nenhum projeto associado à sessão."})
                 return
-            self._send_json(200, session.get_live_data())
+            self._send_json(200, {"success": True, "data": session.get_live_data()})
             return
 
         self._send_json(404, {"error": f"Rota não encontrada: {path}"})
@@ -520,7 +520,7 @@ class HubRequestHandler(BaseHTTPRequestHandler):
             try:
                 full_path = create_folder(proj_root, rel_path)
                 session.rescan()
-                self._send_json(200, {"success": True, "created": full_path})
+                self._send_json(200, {"success": True, "created": full_path, "data": session.get_live_data()})
             except Exception as e:
                 self._send_json(400, {"success": False, "error": str(e)})
             return
@@ -529,9 +529,9 @@ class HubRequestHandler(BaseHTTPRequestHandler):
             rel_path = payload.get("path", "").strip()
             content = payload.get("content", "")
             try:
-                full_path = create_markdown_spec(proj_root, rel_path, template_name="empty", custom_content=content)
+                full_path = create_file(proj_root, rel_path, content=content)
                 session.rescan()
-                self._send_json(200, {"success": True, "created": full_path})
+                self._send_json(200, {"success": True, "created": full_path, "data": session.get_live_data()})
             except Exception as e:
                 self._send_json(400, {"success": False, "error": str(e)})
             return
@@ -542,7 +542,7 @@ class HubRequestHandler(BaseHTTPRequestHandler):
             try:
                 renamed = rename_resource(proj_root, old_path, new_name)
                 session.rescan()
-                self._send_json(200, {"success": True, "renamed": renamed})
+                self._send_json(200, {"success": True, "renamed": renamed, "data": session.get_live_data()})
             except Exception as e:
                 self._send_json(400, {"success": False, "error": str(e)})
             return
@@ -552,7 +552,7 @@ class HubRequestHandler(BaseHTTPRequestHandler):
             try:
                 deleted = delete_resource(proj_root, rel_path)
                 session.rescan()
-                self._send_json(200, {"success": True, "deleted": deleted})
+                self._send_json(200, {"success": True, "deleted": deleted, "data": session.get_live_data()})
             except Exception as e:
                 self._send_json(400, {"success": False, "error": str(e)})
             return
