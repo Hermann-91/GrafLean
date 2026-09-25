@@ -63,6 +63,33 @@ class TestArchitectureVisualizer(unittest.TestCase):
             self.assertIn('"git": "modified"', content)
             self.assertIn("git-badge-new", content)
             self.assertIn("git-badge-mod", content)
+    def test_generates_html_with_hierarchy_levels_and_toolbar(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            graph = ProjectGraph(tmp_dir)
+            file_node = Node(id="file://mod.py", name="mod.py", symbol_type=SymbolType.FILE, file_path="mod.py", line=1)
+            class_node = Node(id="ClassA", name="ClassA", symbol_type=SymbolType.CLASS, file_path="mod.py", line=5)
+            method_node = Node(id="ClassA::foo", name="foo", symbol_type=SymbolType.METHOD, file_path="mod.py", line=10)
+
+            graph.nodes = {"file://mod.py": file_node, "ClassA": class_node, "ClassA::foo": method_node}
+            graph.edges = []
+            graph.analyzer = ArchitectureAnalyzer([file_node, class_node, method_node], [])
+            graph.analyzer.analyze_all()
+
+            viz = ArchitectureVisualizer(graph)
+            out_file = os.path.join(tmp_dir, "map.html")
+            path = viz.generate_html(out_file)
+
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("graph-toolbar", content)
+            self.assertIn("btn-mode-auto", content)
+            self.assertIn("btn-mode-arch", content)
+            self.assertIn("btn-mode-all", content)
+            self.assertIn("btn-physics", content)
+            self.assertIn('"level": 1', content)
+            self.assertIn('"level": 2', content)
+            self.assertIn('"level": 3', content)
 
 
 if __name__ == "__main__":

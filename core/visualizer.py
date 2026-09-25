@@ -37,6 +37,14 @@ class ArchitectureVisualizer:
             m = node.metrics
             doc_text = f"💡 {node.docstring}" if node.docstring else "Sem descrição."
             tooltip = f"🏷️ {node.name} ({node.symbol_type.value.upper()})\n{doc_text}"
+
+            level = 1 if node.symbol_type.value == "file" else (2 if node.symbol_type.value in ("class", "interface", "trait") else 3)
+            parent_id = None
+            if level == 2:
+                parent_id = f"file://{node.file_path}"
+            elif level == 3:
+                parent_id = node.id.rsplit("::", 1)[0] if "::" in node.id else f"file://{node.file_path}"
+
             nodes_data.append({
                 "id": node.id,
                 "label": node.name,
@@ -50,7 +58,9 @@ class ArchitectureVisualizer:
                 "instability": m.instability,
                 "deep": m.is_deep_module,
                 "cycle": m.has_cycles,
-                "git": node.git_status or ""
+                "git": node.git_status or "",
+                "level": level,
+                "parentId": parent_id
             })
 
         # 2. Prepara dados das arestas
@@ -974,7 +984,17 @@ class ArchitectureVisualizer:
 
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Recolher/Expandir Barra Lateral">◀</button>
 
-    <div id="network"></div>
+    <div id="network-container" style="flex:1; position:relative; height:100%; width:100%;">
+        <!-- Barra de Ferramentas Flutuante do Grafo -->
+        <div id="graph-toolbar" style="position:absolute; top:12px; left:16px; z-index:90; display:flex; gap:6px; background:rgba(22,23,27,0.85); backdrop-filter:blur(8px); padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+            <button class="sublime-btn" id="btn-mode-auto" onclick="setGraphMode('auto')" style="background:#272822; color:#a6e22e; border-color:#a6e22e;" title="Foco Inteligente: Nós criados pela IA abertos e código estável agrupado">✨ Foco Inteligente</button>
+            <button class="sublime-btn" id="btn-mode-arch" onclick="setGraphMode('arch')" title="Somente Arquivos e Classes">🏛️ Arquitetura</button>
+            <button class="sublime-btn" id="btn-mode-all" onclick="setGraphMode('all')" title="Abrir Todos os Nós">🔬 Abrir Tudo</button>
+            <button class="sublime-btn" id="btn-physics" onclick="togglePhysics()" title="Alternar Física de Colisão">⚡ Física: Off</button>
+            <span id="graph-nodes-count" style="font-size:11px; color:#a6adc8; align-self:center; margin-left:6px; font-weight:600;">-- nós</span>
+        </div>
+        <div id="network" style="width:100%; height:100%;"></div>
+    </div>
 
     <!-- Dados Protegidos e Imunes a Conflito de Tags Internas -->
     <script type="application/json" id="data-nodes">{nodes_json}</script>
@@ -1027,39 +1047,27 @@ class ArchitectureVisualizer:
                     const targetNodes = typeof nodes !== 'undefined' ? nodes : window.nodes;
                     rawNodes = data.nodes;
                     const currentIds = new Set(data.nodes.map(n => n.id));
-                    const existingIds = targetNodes.getIds();
-                    const toRemove = existingIds.filter(id => !currentIds.has(id));
-                    if (toRemove.length > 0) targetNodes.remove(toRemove);
-                    targetNodes.update(data.nodes.map(n => ({{
-                        id: n.id,
-                        label: n.label || n.name,
-                        title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + (n.title || n.name),
-                        color: {{
-                            background: n.type === "file" ? "#2a281e" : (colorMap[n.type] || "#cdd6f4"),
-                            border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (n.type === "file" ? "#f9e2af" : (n.cycle ? "#f38ba8" : (n.deep ? "#a6e3a1" : "#45475a"))))
-                        }},
-                        borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (n.type === "file" ? 2 : (n.cycle ? 3 : 1)),
-                        size: Math.max(12, Math.min(30, 10 + (n.ca || 0) * 3)),
-                        shape: n.type === "file" ? "box" : "dot",
-                        font: {{
-                            color: n.type === "file" ? "#f9e2af" : "#cdd6f4",
-                            size: n.type === "file" ? 11 : 12,
-                            bold: n.type === "file"
-                        }}
-                    }})));
+                    rawNodes = data.nodes;
+                    if (typeof allNodesMap !== 'undefined') {{
+                        allNodesMap.clear();
+                        rawNodes.forEach(n => allNodesMap.set(n.id, n));
+                    }}
+                    if (data.edges) rawEdges = data.edges;
+                    if (typeof refreshGraphData === 'function') {{
+                        refreshGraphData();
+                    }} else {{
+                        const existingIds = targetNodes.getIds();
+                        const toRemove = existingIds.filter(id => !currentIds.has(id));
+                        if (toRemove.length > 0) targetNodes.remove(toRemove);
+                        targetNodes.update(data.nodes.map(n => formatVisNode(n)));
+                    }}
                     if (typeof network !== 'undefined') network.redraw();
                 }}
                 if (data.edges && (typeof edges !== 'undefined' || window.edges)) {{
-                    const targetEdges = typeof edges !== 'undefined' ? edges : window.edges;
                     rawEdges = data.edges;
-                    targetEdges.clear();
-                    targetEdges.add(data.edges.filter(e => e.source && e.target).map(e => ({{
-                        from: e.source,
-                        to: e.target,
-                        arrows: "to",
-                        color: {{ color: "#45475a", highlight: "#89b4fa" }},
-                        width: 1
-                    }})));
+                    if (typeof refreshGraphData === 'function') {{
+                        refreshGraphData();
+                    }}
                     if (typeof network !== 'undefined') network.redraw();
                 }}
                 if (currentLoadedFilePath && !rawFileSources[currentLoadedFilePath]) {{
@@ -1099,44 +1107,151 @@ class ArchitectureVisualizer:
             "file": "#f9e2af"
         }};
 
-        // 1. Vis.js Network Setup
-        const nodes = new vis.DataSet(rawNodes.map(n => ({{
-            id: n.id,
-            label: n.label,
-            title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + n.title,
-            color: {{
-                background: n.type === "file" ? "#2a281e" : (colorMap[n.type] || "#cdd6f4"),
-                border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (n.type === "file" ? "#f9e2af" : (n.cycle ? "#f38ba8" : (n.deep ? "#a6e3a1" : "#45475a"))))
-            }},
-            borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (n.type === "file" ? 2 : (n.cycle ? 3 : 1)),
-            size: Math.max(12, Math.min(30, 10 + n.ca * 3)),
-            shape: n.type === "file" ? "box" : "dot",
-            font: {{
-                color: n.type === "file" ? "#f9e2af" : "#cdd6f4",
-                size: n.type === "file" ? 11 : 12,
-                bold: n.type === "file"
-            }}
-        }})));
+        // 1. Vis.js Network Setup com Hierarquia e Foco Inteligente
+        const allNodesMap = new Map();
+        rawNodes.forEach(n => allNodesMap.set(n.id, n));
+        const expandedNodes = new Set();
+        let currentViewMode = 'auto'; // 'auto' | 'arch' | 'all'
+        let physicsRunning = false;
 
-        const edges = new vis.DataSet(rawEdges.map(e => ({{
-            from: e.source,
-            to: e.target,
-            arrows: "to",
-            color: {{ color: "#45475a", highlight: "#89b4fa" }},
-            width: 1
-        }})));
+        function formatVisNode(n) {{
+            return {{
+                id: n.id,
+                label: n.label,
+                title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + n.title,
+                color: {{
+                    background: n.type === "file" ? "#2a281e" : (colorMap[n.type] || "#cdd6f4"),
+                    border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (n.type === "file" ? "#f9e2af" : (n.cycle ? "#f38ba8" : (n.deep ? "#a6e3a1" : "#45475a"))))
+                }},
+                borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (n.type === "file" ? 2 : (n.cycle ? 3 : 1)),
+                size: Math.max(12, Math.min(30, 10 + n.ca * 3)),
+                shape: n.type === "file" ? "box" : "dot",
+                font: {{
+                    color: n.type === "file" ? "#f9e2af" : "#cdd6f4",
+                    size: n.type === "file" ? 11 : 12,
+                    bold: n.type === "file"
+                }}
+            }};
+        }}
+
+        function getFilteredNodes() {{
+            const visible = [];
+            const isSmall = rawNodes.length <= 150;
+
+            rawNodes.forEach(n => {{
+                if (currentViewMode === 'all' || isSmall) {{
+                    visible.push(formatVisNode(n));
+                }} else if (currentViewMode === 'arch') {{
+                    if (n.level <= 2) visible.push(formatVisNode(n));
+                }} else {{
+                    // Modo 'auto' (Foco Inteligente):
+                    if (n.level <= 2) {{
+                        visible.push(formatVisNode(n));
+                    }} else if (n.level === 3) {{
+                        if (n.git === 'new' || n.git === 'modified' || (n.parentId && expandedNodes.has(n.parentId))) {{
+                            visible.push(formatVisNode(n));
+                        }}
+                    }}
+                }}
+            }});
+            return visible;
+        }}
+
+        const nodes = new vis.DataSet(getFilteredNodes());
+
+        function getFilteredEdges() {{
+            const currentIds = new Set(nodes.getIds());
+            return rawEdges.filter(e => currentIds.has(e.source) && currentIds.has(e.target)).map(e => ({{
+                from: e.source,
+                to: e.target,
+                arrows: "to",
+                color: {{ color: "#45475a", highlight: "#89b4fa" }},
+                width: 1
+            }}));
+        }}
+
+        const edges = new vis.DataSet(getFilteredEdges());
 
         const container = document.getElementById('network');
         const network = new vis.Network(container, {{ nodes, edges }}, {{
-            interaction: {{ hover: true, tooltipDelay: 50, selectConnectedEdges: true }},
+            interaction: {{ hover: true, tooltipDelay: 50, selectConnectedEdges: true, hideEdgesOnDrag: true }},
             physics: {{
+                enabled: true,
                 solver: "forceAtlas2Based",
-                forceAtlas2Based: {{ gravitationalConstant: -55, centralGravity: 0.01, springLength: 95 }}
+                forceAtlas2Based: {{ gravitationalConstant: -55, centralGravity: 0.01, springLength: 95 }},
+                stabilization: {{ iterations: 35, updateInterval: 10 }}
             }}
         }});
         window.nodes = nodes;
         window.edges = edges;
         window.network = network;
+
+        network.once('stabilizationIterationsDone', () => {{
+            network.setOptions({{ physics: {{ enabled: false }} }});
+            physicsRunning = false;
+            updatePhysicsUI();
+        }});
+
+        network.on('click', (params) => {{
+            if (params.nodes && params.nodes.length > 0) {{
+                const clickedId = params.nodes[0];
+                const n = allNodesMap.get(clickedId);
+                if (n && (n.level === 1 || n.level === 2)) {{
+                    if (expandedNodes.has(clickedId)) {{
+                        expandedNodes.delete(clickedId);
+                    }} else {{
+                        expandedNodes.add(clickedId);
+                    }}
+                    refreshGraphData();
+                }}
+            }}
+        }});
+
+        function refreshGraphData() {{
+            const newNodes = getFilteredNodes();
+            nodes.clear();
+            nodes.add(newNodes);
+            edges.clear();
+            edges.add(getFilteredEdges());
+            updateNodesCount();
+        }}
+
+        function setGraphMode(mode) {{
+            currentViewMode = mode;
+            document.querySelectorAll('#graph-toolbar .sublime-btn').forEach(b => {{
+                b.style.borderColor = '';
+                b.style.color = '';
+                b.style.background = '';
+            }});
+            const activeBtn = document.getElementById(`btn-mode-${{mode}}`);
+            if (activeBtn) {{
+                activeBtn.style.borderColor = '#a6e22e';
+                activeBtn.style.color = '#a6e22e';
+                activeBtn.style.background = '#272822';
+            }}
+            refreshGraphData();
+        }}
+
+        function togglePhysics() {{
+            physicsRunning = !physicsRunning;
+            network.setOptions({{ physics: {{ enabled: physicsRunning }} }});
+            updatePhysicsUI();
+        }}
+
+        function updatePhysicsUI() {{
+            const btn = document.getElementById('btn-physics');
+            if (btn) {{
+                btn.innerText = physicsRunning ? '⚡ Física: On' : '⚡ Física: Off';
+                btn.style.color = physicsRunning ? '#a6e22e' : '';
+                btn.style.borderColor = physicsRunning ? '#a6e22e' : '';
+            }}
+        }}
+
+        function updateNodesCount() {{
+            const badge = document.getElementById('graph-nodes-count');
+            if (badge) badge.innerText = `${{nodes.length}} nós ativos`;
+        }}
+        updateNodesCount();
 
         // 2. Construtor da Tabela de Código Monokai Sublime
         function buildSublimeTable(highlightedHtml, targetLine) {{
@@ -1346,6 +1461,7 @@ class ArchitectureVisualizer:
                 else if (filePath.endsWith('.html') || filePath.endsWith('.blade.php')) {{ lang = 'html'; langLabel = 'HTML / Blade'; }}
                 else if (filePath.endsWith('.md')) {{ lang = 'markdown'; langLabel = 'Markdown'; }}
                 else if (filePath.endsWith('.json')) {{ lang = 'json'; langLabel = 'JSON'; }}
+                else if (filePath.endsWith('.css')) {{ lang = 'css'; langLabel = 'CSS'; }}
 
                 statusPos.innerText = `Line ${{targetLine || 1}}, Column 1`;
                 statusLang.innerText = isEditMode ? `UTF-8 | ${{langLabel}} (Modo Edição • Ctrl+S para Salvar)` : `UTF-8 | ${{langLabel}}`;
