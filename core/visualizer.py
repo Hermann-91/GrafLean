@@ -852,6 +852,9 @@ class ArchitectureVisualizer:
                 <button class="sublime-btn" id="btn-reopen-code" onclick="toggleCodeSubpanel()" style="display:none;" title="Mostrar Editor de Código">
                     📄 Código
                 </button>
+                <button class="sublime-btn" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Alternar Visibilidade do Grafo">
+                    🌐 Grafo
+                </button>
             </div>
         </div>
 
@@ -977,6 +980,7 @@ class ArchitectureVisualizer:
             <button class="sublime-btn" id="btn-mode-arch" onclick="setGraphMode('arch')" title="Somente Arquivos e Classes">🏛️ Arquitetura</button>
             <button class="sublime-btn" id="btn-mode-all" onclick="setGraphMode('all')" title="Abrir Todos os Nós">🔬 Abrir Tudo</button>
             <button class="sublime-btn" id="btn-physics" onclick="togglePhysics()" title="Alternar Física de Colisão">⚡ Física: Off</button>
+            <button class="sublime-btn" id="btn-collapse-graph" onclick="toggleGraphPanel()" title="Recolher Grafo (Modo Código Tela Cheia)">▶ Ocultar Grafo</button>
             <span id="graph-nodes-count" style="font-size:11px; color:#a6adc8; align-self:center; margin-left:6px; font-weight:600;">-- nós</span>
         </div>
         <div id="network" style="width:100%; height:100%;"></div>
@@ -1729,6 +1733,59 @@ class ArchitectureVisualizer:
                 updateSidebarWidth(Math.max(500, targetW));
             }}
             if (window.network) setTimeout(() => network.redraw(), 100);
+        }}
+
+        // 8. Alterna visibilidade do Grafo (Recolher / Expandir)
+        let isGraphCollapsed = false;
+        let savedSidebarWidthBeforeGraphCollapse = null;
+
+        function toggleGraphPanel(forceState) {{
+            const networkContainer = document.getElementById('network-container');
+            const resizer = document.getElementById('resizer');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const btnToggleGraph = document.getElementById('btn-toggle-graph');
+
+            if (typeof forceState === 'boolean') {{
+                isGraphCollapsed = forceState;
+            }} else {{
+                isGraphCollapsed = !isGraphCollapsed;
+            }}
+
+            if (isGraphCollapsed) {{
+                networkContainer.style.display = 'none';
+                if (resizer) resizer.style.display = 'none';
+                if (sidebarToggle) sidebarToggle.style.display = 'none';
+                savedSidebarWidthBeforeGraphCollapse = sidebar.style.width || (sidebar.offsetWidth + 'px');
+                sidebar.style.width = '100%';
+                sidebar.style.minWidth = '100%';
+                sidebar.style.maxWidth = '100%';
+                if (btnToggleGraph) {{
+                    btnToggleGraph.innerHTML = '🌐 Reabrir Grafo';
+                    btnToggleGraph.style.background = '#272822';
+                    btnToggleGraph.style.color = '#a6e22e';
+                    btnToggleGraph.style.borderColor = '#a6e22e';
+                }}
+            }} else {{
+                networkContainer.style.display = 'block';
+                if (resizer) resizer.style.display = 'block';
+                if (sidebarToggle) sidebarToggle.style.display = 'block';
+                const prevW = savedSidebarWidthBeforeGraphCollapse || '600px';
+                sidebar.style.width = prevW;
+                sidebar.style.minWidth = '380px';
+                sidebar.style.maxWidth = '90vw';
+                if (btnToggleGraph) {{
+                    btnToggleGraph.innerHTML = '🌐 Grafo';
+                    btnToggleGraph.style.background = '';
+                    btnToggleGraph.style.color = '';
+                    btnToggleGraph.style.borderColor = '';
+                }}
+                if (window.network) {{
+                    setTimeout(() => {{
+                        network.redraw();
+                    }}, 100);
+                }}
+            }}
         }}
 
         // Alterna visibilidade da barra lateral inteira
