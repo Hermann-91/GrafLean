@@ -181,34 +181,7 @@ class ArchitectureVisualizer:
             box-shadow: 0 0 12px rgba(137, 180, 250, 0.8) !important;
         }}
 
-        /* Floating Toggle Button */
-        #sidebar-toggle {{
-            position: absolute;
-            top: 12px;
-            left: 592px;
-            z-index: 150;
-            background: #1e1e2e;
-            color: #89b4fa;
-            border: 1px solid #45475a;
-            border-radius: 8px;
-            padding: 6px 10px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: bold;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            transition: background 0.2s ease, left 0.25s ease;
-            height: 31px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }}
-        #sidebar-toggle:hover {{
-            background: #313244;
-            color: #b4befe;
-        }}
-        #sidebar.collapsed ~ #sidebar-toggle {{
-            left: 12px !important;
-        }}
+
 
         /* Header Superior do Workspace */
         .workspace-header {{
@@ -845,9 +818,11 @@ class ArchitectureVisualizer:
     <div id="sidebar">
         <!-- Header do Workspace -->
         <div class="workspace-header">
-            <div>
-                <div class="brand-title">🏛️ GrafLean</div>
-                <div class="brand-sub">📁 {project_name}</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <a href="/" class="sublime-btn" style="text-decoration:none; font-weight:700; color:#89b4fa; border-color:#45475a;" title="Ir para a Biblioteca de Projetos">
+                    🏛️ GrafLean | ◀ Biblioteca
+                </a>
+                <span class="brand-sub" style="font-size:11px; color:#6c7086;">📁 {project_name}</span>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
                 <button class="sublime-btn" id="btn-reopen-nav" onclick="toggleNavSubpanel()" style="display:none;" title="Mostrar Árvore/Inspetor">
@@ -858,6 +833,9 @@ class ArchitectureVisualizer:
                 </button>
                 <button class="sublime-btn" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Alternar Visibilidade do Grafo">
                     🌐 Grafo
+                </button>
+                <button class="sublime-btn" id="btn-collapse-stage" onclick="handleStageCollapse()" style="background:#2a283e; border-color:#89b4fa; color:#b4befe; font-weight:bold; padding:4px 10px;" title="Recolher (1º Estágio: Código • 2º Estágio: Barra Lateral)">
+                    ◀
                 </button>
             </div>
         </div>
@@ -975,11 +953,11 @@ class ArchitectureVisualizer:
     <!-- Divisor Arrastável Externo com o Mouse (Sidebar vs Grafo) -->
     <div id="resizer" title="Arraste com o mouse para redimensionar a barra lateral"></div>
 
-    <button id="sidebar-toggle" onclick="toggleSidebar()" title="Recolher/Expandir Barra Lateral">◀</button>
+    <button id="sidebar-reopen-btn" class="sublime-btn" onclick="toggleSidebar()" style="display:none; position:absolute; top:12px; left:12px; z-index:150; height:31px; padding:6px 11px; font-weight:bold; background:#1e1e2e; border:1px solid #45475a; color:#89b4fa;" title="Reabrir Barra Lateral">▶</button>
 
     <div id="network-container" style="flex:1; position:relative; height:100%; width:100%;">
         <!-- Barra de Ferramentas Flutuante do Grafo -->
-        <div id="graph-toolbar" style="position:absolute; top:12px; left:56px; z-index:90; display:flex; gap:6px; background:rgba(22,23,27,0.85); backdrop-filter:blur(8px); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center;">
+        <div id="graph-toolbar" style="position:absolute; top:12px; left:16px; z-index:90; display:flex; gap:6px; background:rgba(22,23,27,0.85); backdrop-filter:blur(8px); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center;">
             <button class="sublime-btn" id="btn-mode-auto" onclick="setGraphMode('auto')" style="background:#272822; color:#a6e22e; border-color:#a6e22e;" title="Foco Inteligente: Nós criados pela IA abertos e código estável agrupado">✨ Foco Inteligente</button>
             <button class="sublime-btn" id="btn-mode-arch" onclick="setGraphMode('arch')" title="Somente Arquivos e Classes">🏛️ Arquitetura</button>
             <button class="sublime-btn" id="btn-mode-all" onclick="setGraphMode('all')" title="Abrir Todos os Nós">🔬 Abrir Tudo</button>
@@ -1792,23 +1770,33 @@ class ArchitectureVisualizer:
             }}
         }}
 
+        // Função de recolhimento progressivo em 2 estágios (1º Código • 2º Árvore)
+        function handleStageCollapse() {{
+            const editor = document.getElementById('editor-subpanel');
+            const isEditorOpen = editor && editor.style.display !== 'none';
+            if (isEditorOpen) {{
+                toggleCodeSubpanel(true);
+            }} else {{
+                toggleSidebar();
+            }}
+        }}
+
         // Alterna visibilidade da barra lateral inteira
         function toggleSidebar() {{
             const sb = document.getElementById('sidebar');
-            const btn = document.getElementById('sidebar-toggle');
+            const btnReopen = document.getElementById('sidebar-reopen-btn');
+            const graphToolbar = document.getElementById('graph-toolbar');
             sb.classList.toggle('collapsed');
-            btn.innerText = sb.classList.contains('collapsed') ? '▶' : '◀';
+            const isCollapsed = sb.classList.contains('collapsed');
+            if (btnReopen) btnReopen.style.display = isCollapsed ? 'inline-flex' : 'none';
+            if (graphToolbar) graphToolbar.style.left = isCollapsed ? '52px' : '16px';
             if (window.network) setTimeout(() => network.redraw(), 260);
         }}
 
         function updateSidebarWidth(newWidth) {{
             const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('sidebar-toggle');
             sidebar.style.width = newWidth + 'px';
             sidebar.style.minWidth = newWidth + 'px';
-            if (!sidebar.classList.contains('collapsed')) {{
-                toggleBtn.style.left = (newWidth + 12) + 'px';
-            }}
             if (window.network) network.redraw();
             try {{
                 localStorage.setItem('graf_lens_sidebar_width', newWidth);
