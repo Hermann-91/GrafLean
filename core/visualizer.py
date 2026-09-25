@@ -184,26 +184,30 @@ class ArchitectureVisualizer:
         /* Floating Toggle Button */
         #sidebar-toggle {{
             position: absolute;
-            top: 15px;
-            left: 595px;
+            top: 12px;
+            left: 592px;
             z-index: 150;
             background: #1e1e2e;
             color: #89b4fa;
             border: 1px solid #45475a;
             border-radius: 8px;
-            padding: 8px 12px;
+            padding: 6px 10px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            transition: background 0.2s ease;
+            transition: background 0.2s ease, left 0.25s ease;
+            height: 31px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }}
         #sidebar-toggle:hover {{
             background: #313244;
             color: #b4befe;
         }}
         #sidebar.collapsed ~ #sidebar-toggle {{
-            left: 15px !important;
+            left: 12px !important;
         }}
 
         /* Header Superior do Workspace */
@@ -975,7 +979,7 @@ class ArchitectureVisualizer:
 
     <div id="network-container" style="flex:1; position:relative; height:100%; width:100%;">
         <!-- Barra de Ferramentas Flutuante do Grafo -->
-        <div id="graph-toolbar" style="position:absolute; top:12px; left:16px; z-index:90; display:flex; gap:6px; background:rgba(22,23,27,0.85); backdrop-filter:blur(8px); padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+        <div id="graph-toolbar" style="position:absolute; top:12px; left:56px; z-index:90; display:flex; gap:6px; background:rgba(22,23,27,0.85); backdrop-filter:blur(8px); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center;">
             <button class="sublime-btn" id="btn-mode-auto" onclick="setGraphMode('auto')" style="background:#272822; color:#a6e22e; border-color:#a6e22e;" title="Foco Inteligente: Nós criados pela IA abertos e código estável agrupado">✨ Foco Inteligente</button>
             <button class="sublime-btn" id="btn-mode-arch" onclick="setGraphMode('arch')" title="Somente Arquivos e Classes">🏛️ Arquitetura</button>
             <button class="sublime-btn" id="btn-mode-all" onclick="setGraphMode('all')" title="Abrir Todos os Nós">🔬 Abrir Tudo</button>
@@ -1803,7 +1807,7 @@ class ArchitectureVisualizer:
             sidebar.style.width = newWidth + 'px';
             sidebar.style.minWidth = newWidth + 'px';
             if (!sidebar.classList.contains('collapsed')) {{
-                toggleBtn.style.left = (newWidth + 15) + 'px';
+                toggleBtn.style.left = (newWidth + 12) + 'px';
             }}
             if (window.network) network.redraw();
             try {{
