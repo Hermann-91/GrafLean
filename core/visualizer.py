@@ -1088,22 +1088,24 @@ class ArchitectureVisualizer:
             const labelPrefix = isFile ? "📁 " : (n.type === "interface" ? "📜 " : "🏛️ ");
             return {{
                 id: n.id,
-                label: labelPrefix + n.label,
+                label: isFile ? labelPrefix + n.label : n.label,
                 title: (n.git === "new" ? "[+ Git: Novo]\\n" : (n.git === "modified" ? "[~ Git: Modificado]\\n" : "")) + n.title,
                 color: {{
-                    background: isFile ? "#181825" : "#1e1e2e",
-                    border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (isFile ? "#f9e2af" : (colorMap[n.type] || "#89b4fa")))
+                    background: isFile ? "#261c14" : "#181825",
+                    border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (isFile ? "#fab387" : "#89b4fa"))
                 }},
-                borderWidth: (n.git === "new" || n.git === "modified") ? 3 : 2,
-                shape: "box",
-                shapeProperties: {{
-                    borderRadius: isFile ? 8 : 4
-                }},
-                margin: isFile ? {{ top: 10, bottom: 10, left: 14, right: 14 }} : {{ top: 6, bottom: 6, left: 10, right: 10 }},
+                borderWidth: (n.git === "new" || n.git === "modified") ? 3 : (isFile ? 2 : 2.5),
+                shape: isFile ? "box" : "dot",
+                size: isFile ? undefined : 16,
+                shapeProperties: isFile ? {{
+                    borderRadius: 8
+                }} : undefined,
+                margin: isFile ? {{ top: 6, bottom: 6, left: 12, right: 12 }} : undefined,
                 font: {{
-                    color: isFile ? "#f9e2af" : (colorMap[n.type] || "#89b4fa"),
-                    size: isFile ? 13 : 11,
-                    bold: true
+                    color: isFile ? "#fab387" : "#89b4fa",
+                    size: isFile ? 12 : 11,
+                    bold: true,
+                    vadjust: isFile ? 0 : 2
                 }}
             }};
         }}
@@ -1144,11 +1146,12 @@ class ArchitectureVisualizer:
                 edgeAggregator.set(key, {{
                     from: n.parentId,
                     to: n.id,
-                    dashes: [4, 4],
+                    length: 60,
+                    dashes: [3, 4],
                     arrows: {{ to: {{ enabled: false }} }},
-                    color: {{ color: "rgba(249, 226, 175, 0.35)", highlight: "#f9e2af" }},
-                    width: 1.5,
-                    title: "🏛️ Classe contida no arquivo"
+                    color: {{ color: "rgba(250, 179, 135, 0.2)", highlight: "#fab387" }},
+                    width: 1.2,
+                    title: "🏛️ Classe contida na célula"
                 }});
             }});
 
@@ -1158,20 +1161,24 @@ class ArchitectureVisualizer:
                 const tgt = resolveToGraphNodeId(e.target);
                 if (src && tgt && src !== tgt && graphNodeIds.has(src) && graphNodeIds.has(tgt)) {{
                     const key = `${{src}}->${{tgt}}`;
+                    const srcNode = allNodesMap.get(src);
+                    const isFileLevel = srcNode && srcNode.type === "file";
+                    const edgeColor = isFileLevel ? "rgba(250, 179, 135, 0.7)" : "rgba(137, 180, 250, 0.7)";
+                    const edgeHighlight = isFileLevel ? "#fab387" : "#89b4fa";
                     if (!edgeAggregator.has(key)) {{
                         edgeAggregator.set(key, {{
                             from: src,
                             to: tgt,
                             arrows: {{ to: {{ enabled: true, scaleFactor: 0.8 }} }},
-                            color: {{ color: "rgba(137, 180, 250, 0.45)", highlight: "#89b4fa" }},
-                            width: 1.5,
+                            color: {{ color: edgeColor, highlight: edgeHighlight }},
+                            width: 1.8,
                             count: 1
                         }});
                     }} else {{
                         const existing = edgeAggregator.get(key);
                         if (existing.count) {{
                             existing.count++;
-                            existing.width = Math.min(4, 1.5 + existing.count * 0.4);
+                            existing.width = Math.min(4, 1.8 + existing.count * 0.4);
                             existing.title = `${{existing.count}} conexões/chamadas`;
                         }}
                     }}
@@ -1203,6 +1210,59 @@ class ArchitectureVisualizer:
         window.nodes = nodes;
         window.edges = edges;
         window.network = network;
+
+        // 2. Renderização da Membrana Celular (Arquivo englobando Classes)
+        network.on("beforeDrawing", function(ctx) {{
+            const graphNodeIds = new Set(nodes.getIds());
+            const fileClassesMap = new Map();
+
+            rawNodes.filter(n => (n.type === "class" || n.type === "interface" || n.type === "trait") && n.parentId && graphNodeIds.has(n.parentId)).forEach(c => {{
+                if (!fileClassesMap.has(c.parentId)) fileClassesMap.set(c.parentId, []);
+                fileClassesMap.get(c.parentId).push(c.id);
+            }});
+
+            fileClassesMap.forEach((classIds, fileId) => {{
+                const nodeIds = [fileId, ...classIds];
+                const positions = network.getPositions(nodeIds);
+                const validPositions = nodeIds.map(id => positions[id]).filter(Boolean);
+                if (validPositions.length === 0) return;
+
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                validPositions.forEach(p => {{
+                    if (p.x < minX) minX = p.x;
+                    if (p.x > maxX) maxX = p.x;
+                    if (p.y < minY) minY = p.y;
+                    if (p.y > maxY) maxY = p.y;
+                }});
+
+                const paddingX = 35;
+                const paddingY = 28;
+                const boxX = minX - paddingX;
+                const boxY = minY - paddingY;
+                const boxW = (maxX - minX) + (paddingX * 2);
+                const boxH = (maxY - minY) + (paddingY * 2);
+
+                ctx.save();
+                ctx.beginPath();
+                if (typeof ctx.roundRect === "function") {{
+                    ctx.roundRect(boxX, boxY, boxW, boxH, 20);
+                }} else {{
+                    ctx.rect(boxX, boxY, boxW, boxH);
+                }}
+                ctx.fillStyle = "rgba(250, 179, 135, 0.04)";
+                ctx.fill();
+                ctx.strokeStyle = "rgba(250, 179, 135, 0.6)";
+                ctx.lineWidth = 2.2;
+                ctx.setLineDash([8, 6]);
+                ctx.stroke();
+
+                ctx.font = "bold 10px -apple-system, sans-serif";
+                ctx.fillStyle = "rgba(250, 179, 135, 0.85)";
+                ctx.textAlign = "left";
+                ctx.fillText("CÉLULA MODULAR", boxX + 12, boxY + 14);
+                ctx.restore();
+            }});
+        }});
 
         network.once('stabilizationIterationsDone', () => {{
             network.setOptions({{ physics: {{ enabled: false }} }});
