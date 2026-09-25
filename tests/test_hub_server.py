@@ -96,6 +96,27 @@ class TestHubServer(unittest.TestCase):
         self.assertIn("🏛️ GrafLean", html)
         self.assertIn("◀ Biblioteca", html)
 
+    def test_05b_api_file_content(self):
+        """Testa lazy loading de arquivo via GET e POST /api/file-content com proteção de path traversal."""
+        # 1. GET sob demanda
+        status, res = self._http_get("/api/file-content?path=Index.php")
+        self.assertEqual(status, 200)
+        data = json.loads(res)
+        self.assertTrue(data.get("success"))
+        self.assertIn("class Index", data.get("content"))
+
+        # 2. POST sob demanda
+        status, data = self._http_post_json("/api/file-content", {"path": "Index.php"})
+        self.assertEqual(status, 200)
+        self.assertTrue(data.get("success"))
+        self.assertIn("class Index", data.get("content"))
+
+        # 3. Proteção contra Path Traversal
+        try:
+            self._http_get("/api/file-content?path=../../etc/passwd")
+        except urllib.error.HTTPError as e:
+            self.assertEqual(e.code, 403)
+
     def test_06_api_toggle_ai(self):
         """Alterna o modo IA de um projeto via POST /api/projects/toggle-ai."""
         pid = getattr(self, "registered_id", None)

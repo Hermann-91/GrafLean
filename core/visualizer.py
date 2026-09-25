@@ -77,23 +77,15 @@ class ArchitectureVisualizer:
         tree_builder = ProjectTreeBuilder(self.graph.root_dir, self.graph.nodes)
         tree_data = tree_builder.build().to_dict()
 
-        # 4. Coleta o conteúdo dos arquivos para visualização de código sob demanda
+        # 4. Lazy Loading: Apenas o primeiro arquivo (ou focal) é carregado inicialmente
         file_sources = {}
-        all_paths = set(node.file_path for node in self.graph.nodes.values() if node.file_path)
-        if hasattr(tree_builder, "files_map"):
-            for rel_f in tree_builder.files_map.keys():
-                all_paths.add(os.path.join(self.graph.root_dir, rel_f))
-
-        for f_path in all_paths:
-            if os.path.isfile(f_path):
-                try:
-                    if os.path.getsize(f_path) <= 500 * 1024:
-                        with open(f_path, "r", encoding="utf-8", errors="replace") as f:
-                            file_sources[f_path] = f.read()
-                    else:
-                        file_sources[f_path] = "<!-- Arquivo excede 500KB para exibição inline -->"
-                except Exception:
-                    file_sources[f_path] = ""
+        first_file = next((node.file_path for node in self.graph.nodes.values() if node.file_path and os.path.isfile(node.file_path)), None)
+        if first_file and os.path.getsize(first_file) <= 500 * 1024:
+            try:
+                with open(first_file, "r", encoding="utf-8", errors="replace") as f:
+                    file_sources[first_file] = f.read()
+            except Exception:
+                pass
 
         def safe_json(data) -> str:
             # Escapa < e > como unicode \u003c e \u003e para garantir conformidade estrita com RFC 8259 (JSON)
@@ -1505,7 +1497,7 @@ class ArchitectureVisualizer:
                 }}
             }},
 
-            loadCode(filePath, targetLine) {{
+            async loadCode(filePath, targetLine) {{
                 currentLoadedFilePath = filePath;
                 const container = document.getElementById('sublime-table-container');
                 const textarea = document.getElementById('sublime-editor-textarea');
@@ -1513,16 +1505,44 @@ class ArchitectureVisualizer:
                 const statusPos = document.getElementById('sublime-status-pos');
                 const statusLang = document.getElementById('sublime-status-lang');
 
-                if (!filePath || !rawFileSources[filePath]) {{
-                    container.innerHTML = '<div style="padding: 20px; color: #75715e;">// Arquivo não disponível no cache.</div>';
+                if (!filePath) {{
+                    container.innerHTML = '<div style="padding: 20px; color: #75715e;">// Nenhum arquivo selecionado.</div>';
                     tabFilename.innerText = 'Sem arquivo';
                     if (textarea) textarea.value = '';
                     return;
                 }}
 
-                const source = rawFileSources[filePath];
                 const fileName = filePath.split('/').pop();
                 tabFilename.innerText = fileName;
+
+                // Lazy Loading: busca do cache local ou via API sob demanda
+                let source = rawFileSources[filePath];
+                if (source === undefined) {{
+                    container.innerHTML = `<div style="padding: 20px; color: #89b4fa; font-family: monospace;">⚡ Carregando ${{fileName}} sob demanda...</div>`;
+                    try {{
+                        let res = await fetch(`/api/file-content?path=${{encodeURIComponent(filePath)}}`);
+                        if (!res.ok) {{
+                            res = await fetch('/api/file-content', {{
+                                method: 'POST',
+                                headers: {{ 'Content-Type': 'application/json' }},
+                                body: JSON.stringify({{ path: filePath }})
+                            }});
+                        }}
+                        if (res.ok) {{
+                            const json = await res.json();
+                            if (json.success && json.content !== undefined) {{
+                                source = json.content;
+                                rawFileSources[filePath] = source;
+                            }}
+                        }}
+                    }} catch (e) {{}}
+                }}
+
+                if (source === undefined) {{
+                    container.innerHTML = '<div style="padding: 20px; color: #f38ba8;">// Arquivo não pôde ser carregado.</div>';
+                    if (textarea) textarea.value = '';
+                    return;
+                }}
                 if (textarea) textarea.value = source;
 
                 let lang = 'python';

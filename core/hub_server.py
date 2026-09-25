@@ -133,19 +133,8 @@ class ProjectSession:
         tree_builder = ProjectTreeBuilder(self.graph.root_dir, self.graph.nodes)
         tree_data = tree_builder.build().to_dict()
 
+        # Lazy Loading: arquivos são carregados sob demanda via /api/file-content
         file_sources = {}
-        all_paths = set(node.file_path for node in self.graph.nodes.values() if node.file_path)
-        if hasattr(tree_builder, "files_map"):
-            for rel_f in tree_builder.files_map.keys():
-                all_paths.add(os.path.join(self.graph.root_dir, rel_f))
-
-        for f_path in all_paths:
-            if os.path.isfile(f_path) and os.path.getsize(f_path) <= 500 * 1024:
-                try:
-                    with open(f_path, "r", encoding="utf-8", errors="replace") as f:
-                        file_sources[f_path] = f.read()
-                except Exception:
-                    pass
 
         nodes_data = []
         for node in self.graph.nodes.values():
@@ -437,6 +426,38 @@ class HubRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"success": True, "data": session.get_live_data()})
             return
 
+        # Rota 7: API para obter conteúdo de arquivo sob demanda (Lazy Loading)
+        if path == "/api/file-content":
+            session = self._get_project_context()
+            if not session:
+                self._send_json(404, {"success": False, "error": "Sessão do projeto não identificada."})
+                return
+            query = urllib.parse.parse_qs(parsed.query)
+            target_path = query.get("path", [""])[0].strip()
+            if not target_path:
+                self._send_json(400, {"success": False, "error": "Parâmetro 'path' não fornecido."})
+                return
+
+            proj_root = os.path.abspath(session.project.path)
+            full_path = target_path if os.path.isabs(target_path) else os.path.join(proj_root, target_path)
+            full_path = os.path.abspath(full_path)
+
+            if not full_path.startswith(proj_root):
+                self._send_json(403, {"success": False, "error": "Acesso não autorizado fora do diretório do projeto."})
+                return
+
+            if not os.path.isfile(full_path):
+                self._send_json(404, {"success": False, "error": "Arquivo não encontrado."})
+                return
+
+            try:
+                with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read()
+                self._send_json(200, {"success": True, "path": full_path, "content": content})
+            except Exception as e:
+                self._send_json(500, {"success": False, "error": str(e)})
+            return
+
         self._send_json(404, {"error": f"Rota não encontrada: {path}"})
 
     def do_POST(self):
@@ -511,6 +532,27 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                     f.write(content)
                 session.rescan()
                 self._send_json(200, {"success": True, "message": "Arquivo salvo com sucesso!"})
+            except Exception as e:
+                self._send_json(500, {"success": False, "error": str(e)})
+            return
+
+        if path == "/api/file-content":
+            rel_path = payload.get("path", "").strip()
+            if not rel_path:
+                self._send_json(400, {"success": False, "error": "Parâmetro 'path' não fornecido."})
+                return
+            full_path = rel_path if os.path.isabs(rel_path) else os.path.join(proj_root, rel_path)
+            full_path = os.path.abspath(full_path)
+            if not full_path.startswith(os.path.abspath(proj_root)):
+                self._send_json(403, {"success": False, "error": "Acesso não autorizado fora do diretório do projeto."})
+                return
+            if not os.path.isfile(full_path):
+                self._send_json(404, {"success": False, "error": "Arquivo não encontrado."})
+                return
+            try:
+                with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read()
+                self._send_json(200, {"success": True, "path": full_path, "content": content})
             except Exception as e:
                 self._send_json(500, {"success": False, "error": str(e)})
             return
