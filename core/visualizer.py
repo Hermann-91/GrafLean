@@ -1158,22 +1158,27 @@ class ArchitectureVisualizer:
                 const tgt = resolveToGraphNodeId(e.target);
                 if (src && tgt && src !== tgt && graphNodeIds.has(src) && graphNodeIds.has(tgt)) {{
                     const key = `${{src}}->${{tgt}}`;
-                    const edgeColor = "rgba(137, 180, 250, 0.65)";
-                    const edgeHighlight = "#89b4fa";
                     if (!edgeAggregator.has(key)) {{
                         edgeAggregator.set(key, {{
+                            id: key,
                             from: src,
                             to: tgt,
-                            arrows: {{ to: {{ enabled: true, scaleFactor: 0.8 }} }},
-                            color: {{ color: edgeColor, highlight: edgeHighlight }},
-                            width: 1.6,
+                            arrows: {{ to: {{ enabled: true, scaleFactor: 0.5 }} }},
+                            color: {{
+                                color: "rgba(108, 112, 134, 0.28)",
+                                highlight: "#89b4fa",
+                                hover: "#89b4fa",
+                                inherit: false
+                            }},
+                            smooth: {{ enabled: true, type: "continuous", roundness: 0.35 }},
+                            width: 1.0,
                             count: 1
                         }});
                     }} else {{
                         const existing = edgeAggregator.get(key);
                         if (existing.count) {{
                             existing.count++;
-                            existing.width = Math.min(4.5, 1.6 + existing.count * 0.4);
+                            existing.width = Math.min(2.5, 1.0 + existing.count * 0.2);
                             existing.title = `${{existing.count}} conexões/chamadas`;
                         }}
                     }}
@@ -1188,18 +1193,19 @@ class ArchitectureVisualizer:
         const container = document.getElementById('network');
         const network = new vis.Network(container, {{ nodes, edges }}, {{
             interaction: {{ hover: true, tooltipDelay: 50, selectConnectedEdges: true, hideEdgesOnDrag: true }},
+            edges: {{ selectionWidth: 2.2, hoverWidth: 1.5 }},
             physics: {{
                 enabled: true,
                 solver: "barnesHut",
                 barnesHut: {{
-                    gravitationalConstant: -2500,
-                    centralGravity: 0.2,
-                    springLength: 120,
-                    springConstant: 0.04,
-                    damping: 0.85,
-                    avoidOverlap: 0.7
+                    gravitationalConstant: -6000,
+                    centralGravity: 0.08,
+                    springLength: 260,
+                    springConstant: 0.015,
+                    damping: 0.90,
+                    avoidOverlap: 1.0
                 }},
-                stabilization: {{ iterations: 60, updateInterval: 10 }}
+                stabilization: {{ iterations: 90, updateInterval: 10 }}
             }}
         }});
         window.nodes = nodes;
@@ -1230,13 +1236,13 @@ class ArchitectureVisualizer:
 
         function reorganizeGraph() {{
             network.setOptions({{ physics: {{ enabled: true }} }});
-            network.stabilize(50);
+            network.stabilize(90);
             setTimeout(() => {{
                 network.setOptions({{ physics: {{ enabled: false }} }});
                 physicsRunning = false;
                 updatePhysicsUI();
                 network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
-            }}, 350);
+            }}, 500);
         }}
 
         function resetGraphView() {{
