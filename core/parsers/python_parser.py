@@ -4,7 +4,7 @@ Extrai classes, funções, métodos, herança, imports e chamadas com precisão 
 """
 
 import ast
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from core.models import Node, Edge, SymbolType, EdgeType
 from core.parsers.base import BaseParser, ParseResult
 
@@ -68,7 +68,7 @@ class PythonParser(BaseParser):
 
                 # Métodos da Classe
                 for item in stmt.body:
-                    if isinstance(item, ast.FunctionDef):
+                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                         method_id = f"{class_id}::{item.name}"
                         method_doc = ast.get_docstring(item)
                         method_node = Node(
@@ -104,9 +104,26 @@ class PythonParser(BaseParser):
                                             line=getattr(call, "lineno", item.lineno)
                                         ))
 
-            elif isinstance(stmt, ast.FunctionDef):
+            elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 func_id = f"{file_path}::{stmt.name}"
                 doc = ast.get_docstring(stmt)
+                route_info = self._extract_http_route(stmt.decorator_list)
+                if route_info:
+                    http_m, route_path = route_info
+                    doc = f"🌐 HTTP: [{http_m}] {route_path}\n" + (doc or "")
+                    route_id = f"http://{http_m.lower()}:{route_path}"
+                    route_node = Node(
+                        id=route_id,
+                        name=f"🌐 {http_m} {route_path}",
+                        symbol_type=SymbolType.INTERFACE,
+                        file_path=file_path,
+                        line=stmt.lineno,
+                        docstring=f"Endpoint HTTP: {http_m} {route_path}"
+                    )
+                    result.nodes.append(route_node)
+                    result.edges.append(Edge(source_id=file_node_id, target_id=route_id, edge_type=EdgeType.USES, line=stmt.lineno))
+                    result.edges.append(Edge(source_id=route_id, target_id=func_id, edge_type=EdgeType.CALLS, line=stmt.lineno, description="HTTP Handler"))
+
                 func_node = Node(
                     id=func_id,
                     name=stmt.name,
@@ -119,6 +136,28 @@ class PythonParser(BaseParser):
                 result.edges.append(Edge(source_id=file_node_id, target_id=func_id, edge_type=EdgeType.USES, line=stmt.lineno))
 
         return result
+
+    def _extract_http_route(self, decorator_list: List[ast.expr]) -> Optional[Tuple[str, str]]:
+        """Extrai método HTTP e rota de decoradores (FastAPI, Flask, etc.)."""
+        for dec in decorator_list:
+            if isinstance(dec, ast.Call):
+                func_name = self._resolve_call_name(dec.func) or ""
+                parts = func_name.split(".")
+                method = parts[-1].upper() if len(parts) > 1 else ""
+                if method in {"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"}:
+                    if dec.args and isinstance(dec.args[0], ast.Constant) and isinstance(dec.args[0].value, str):
+                        return (method, dec.args[0].value)
+                elif method == "ROUTE":
+                    route_path = dec.args[0].value if dec.args and isinstance(dec.args[0], ast.Constant) and isinstance(dec.args[0].value, str) else "/"
+                    http_m = "GET"
+                    for kw in dec.keywords:
+                        if kw.arg == "methods" and isinstance(kw.value, (ast.List, ast.Tuple)):
+                            for elt in kw.value.elts:
+                                if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                    http_m = elt.value.upper()
+                                    break
+                    return (http_m, route_path)
+        return None
 
     def _resolve_call_name(self, node: ast.AST) -> Optional[str]:
         if isinstance(node, ast.Name):

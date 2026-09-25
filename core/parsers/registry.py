@@ -10,6 +10,8 @@ from core.parsers.python_parser import PythonParser
 from core.parsers.js_ts_parser import JSTypeScriptParser
 from core.parsers.html_blade_parser import HTMLBladeParser
 from core.parsers.markdown_parser import MarkdownParser
+from core.parsers.json_parser import JSONParser
+from core.parsers.css_parser import CSSParser
 
 
 class ParserRegistry:
@@ -23,6 +25,8 @@ class ParserRegistry:
         js_ts = JSTypeScriptParser()
         html = HTMLBladeParser()
         markdown = MarkdownParser()
+        json_parser = JSONParser()
+        css_parser = CSSParser()
 
         self._parsers[".php"] = php
         self._parsers[".py"] = python
@@ -33,6 +37,8 @@ class ParserRegistry:
         self._parsers[".html"] = html
         self._parsers[".blade.php"] = html
         self._parsers[".md"] = markdown
+        self._parsers[".json"] = json_parser
+        self._parsers[".css"] = css_parser
 
     def get_parser_for_file(self, file_path: str) -> Optional[BaseParser]:
         """Retorna o parser correspondente ou None caso a extensão não seja suportada."""

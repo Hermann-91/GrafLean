@@ -28,6 +28,10 @@ class JSTypeScriptParser(BaseParser):
     )
     RE_HOOK_CALL = re.compile(r"\b(?P<hook>use[A-Z][a-zA-Z0-9_$]*)\s*\(")
     RE_JSX_COMPONENT = re.compile(r"<(?P<comp>[A-Z][a-zA-Z0-9_$]*)\b")
+    RE_HTTP_ROUTE = re.compile(
+        r"(?:app|router)\.(?P<method>get|post|put|delete|patch|options)\s*\(\s*['\"](?P<path>[^'\"]+)['\"]\s*,",
+        re.MULTILINE | re.IGNORECASE
+    )
 
     def parse_source(self, code: str, file_path: str) -> ParseResult:
         result = ParseResult()
@@ -104,5 +108,22 @@ class JSTypeScriptParser(BaseParser):
             line_no = code[:m.start()].count("\n") + 1
             if comp_name in imports:
                 result.edges.append(Edge(source_id=file_node_id, target_id=imports[comp_name], edge_type=EdgeType.CALLS, line=line_no, description=f"Renderiza <{comp_name} />"))
+
+        # 5. Rotas HTTP (Express / Node.js)
+        for m in self.RE_HTTP_ROUTE.finditer(code):
+            line_no = code[:m.start()].count("\n") + 1
+            http_m = m.group("method").upper()
+            route_path = m.group("path")
+            route_id = f"http://{http_m.lower()}:{route_path}"
+            route_node = Node(
+                id=route_id,
+                name=f"🌐 {http_m} {route_path}",
+                symbol_type=SymbolType.INTERFACE,
+                file_path=file_path,
+                line=line_no,
+                docstring=f"Rota HTTP Express: {http_m} {route_path}"
+            )
+            result.nodes.append(route_node)
+            result.edges.append(Edge(source_id=file_node_id, target_id=route_id, edge_type=EdgeType.USES, line=line_no))
 
         return result

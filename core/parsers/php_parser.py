@@ -32,6 +32,10 @@ class PHPParser(BaseParser):
     RE_CALL_THIS = re.compile(r"\$this->(?P<prop>[a-zA-Z0-9_]+)->(?P<method>[a-zA-Z0-9_]+)\(")
     RE_CALL_STATIC = re.compile(r"(?P<class>[a-zA-Z0-9_]+)::(?P<method>[a-zA-Z0-9_]+)\(")
     RE_CALL_NEW = re.compile(r"new\s+(?P<class>[a-zA-Z0-9_]+)\(")
+    RE_ROUTE = re.compile(
+        r"Route::(?P<method>get|post|put|delete|patch|options|any)\s*\(\s*['\"](?P<path>[^'\"]+)['\"]\s*,\s*(?:\[(?P<controller>[a-zA-Z0-9_\\]+)::class,\s*['\"](?P<action>[a-zA-Z0-9_]+)['\"]\]|['\"](?P<controller_str>[a-zA-Z0-9_\\]+)@(?P<action_str>[a-zA-Z0-9_]+)['\"]|function)",
+        re.MULTILINE | re.IGNORECASE
+    )
 
     def parse_source(self, code: str, file_path: str) -> ParseResult:
         result = ParseResult()
@@ -203,6 +207,34 @@ class PHPParser(BaseParser):
                     edge_type=EdgeType.CALLS,
                     line=line_no,
                     description=f"Instanciação new {cls_name}()"
+                ))
+        # 6. Rotas HTTP (Laravel / Lumen)
+        for m in self.RE_ROUTE.finditer(code):
+            line_no = code[:m.start()].count("\n") + 1
+            http_m = m.group("method").upper()
+            route_path = m.group("path")
+            route_id = f"http://{http_m.lower()}:{route_path}"
+            route_node = Node(
+                id=route_id,
+                name=f"🌐 {http_m} {route_path}",
+                symbol_type=SymbolType.INTERFACE,
+                file_path=file_path,
+                line=line_no,
+                docstring=f"Rota HTTP Laravel: {http_m} {route_path}"
+            )
+            result.nodes.append(route_node)
+            result.edges.append(Edge(source_id=file_node_id, target_id=route_id, edge_type=EdgeType.USES, line=line_no))
+
+            ctrl = m.group("controller") or m.group("controller_str")
+            action = m.group("action") or m.group("action_str")
+            if ctrl and action:
+                ctrl_fqcn = self._resolve_fqcn(ctrl, namespace, uses)
+                result.edges.append(Edge(
+                    source_id=route_id,
+                    target_id=f"{ctrl_fqcn}::{action}",
+                    edge_type=EdgeType.CALLS,
+                    line=line_no,
+                    description=f"HTTP Action {ctrl}@{action}"
                 ))
 
         return result
