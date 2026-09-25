@@ -224,7 +224,19 @@ class ArchitectureVisualizer:
             background: #11111b;
             border-right: 1px solid rgba(69, 71, 90, 0.25);
             overflow: hidden;
-            transition: width 0.2s ease;
+            transition: none;
+        }}
+        .workspace-body.code-collapsed #nav-subpanel {{
+            width: 100% !important;
+            min-width: 200px !important;
+            max-width: none !important;
+            border-right: none !important;
+        }}
+        .workspace-body.code-collapsed #internal-resizer {{
+            display: none !important;
+        }}
+        .workspace-body.code-collapsed #editor-subpanel {{
+            display: none !important;
         }}
         #nav-subpanel.hidden {{
             display: none !important;
@@ -825,16 +837,10 @@ class ArchitectureVisualizer:
                 <span class="brand-sub" style="font-size:11px; color:#6c7086;">📁 {project_name}</span>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
-                <button class="sublime-btn" id="btn-reopen-nav" onclick="toggleNavSubpanel()" style="display:none;" title="Mostrar Árvore/Inspetor">
-                    📁 Navegador
-                </button>
-                <button class="sublime-btn" id="btn-reopen-code" onclick="toggleCodeSubpanel()" style="display:none;" title="Mostrar Editor de Código">
-                    📄 Código
-                </button>
                 <button class="sublime-btn" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Alternar Visibilidade do Grafo">
                     🌐 Grafo
                 </button>
-                <button class="sublime-btn" id="btn-collapse-stage" onclick="handleStageCollapse()" style="background:#2a283e; border-color:#89b4fa; color:#b4befe; font-weight:bold; padding:4px 10px;" title="Recolher (1º Estágio: Código • 2º Estágio: Barra Lateral)">
+                <button class="sublime-btn" id="btn-collapse-stage" onclick="toggleCodeSubpanel()" style="background:#2a283e; border-color:#89b4fa; color:#b4befe; font-weight:bold; padding:4px 10px;" title="Ocultar/Mostrar Editor de Código">
                     ◀
                 </button>
             </div>
@@ -847,7 +853,6 @@ class ArchitectureVisualizer:
                 <div class="nav-header-tabs">
                     <button class="nav-tab-btn active" id="subtab-btn-tree" onclick="switchNavTab('tree')">📁 Árvore</button>
                     <button class="nav-tab-btn" id="subtab-btn-inspector" onclick="switchNavTab('inspector')">ℹ️ Inspetor</button>
-                    <button class="nav-toggle-btn" onclick="toggleNavSubpanel()" title="Ocultar Painel Lateral">◀</button>
                 </div>
 
                 <!-- Sub-aba 1: Árvore de Arquivos -->
@@ -868,14 +873,6 @@ class ArchitectureVisualizer:
                         👈 Clique em qualquer arquivo ou símbolo na árvore ou no grafo para inspecionar métricas e conexões.
                     </div>
                     <div id="inspector-content" style="display: none;">
-                        <div class="card">
-                            <h3 id="det-title">-</h3>
-                            <div id="det-git" style="margin-bottom:6px;"></div>
-                            <p class="card-doc" id="det-doc"></p>
-                            <div style="font-size: 11px; color: #89b4fa;" id="det-file">-</div>
-                            <button class="sublime-btn" style="width: 100%; justify-content: center; margin-top: 10px; background: #1e1e2e; border-color: #89b4fa; color: #89b4fa; font-weight: 600;" onclick="copyAgentPrompt()">📋 Copiar Prompt para Agente</button>
-                        </div>
-
                         <div class="card">
                             <b style="font-size: 11px; color: #cdd6f4;">⚖️ Métricas de Arquitetura Limpa:</b>
                             <div class="metric-grid">
@@ -922,7 +919,6 @@ class ArchitectureVisualizer:
                             <button class="sublime-btn" id="btn-toggle-edit" onclick="toggleEditMode()" title="Alternar entre Leitura e Edição">✏️ Editar</button>
                             <button class="sublime-btn" id="btn-save-code" onclick="saveCurrentCode()" style="display:none; background:#a6e22e; color:#11111b; font-weight:700; border-color:#a6e22e;" title="Salvar Alterações no Disco (Ctrl+S)">💾 Salvar</button>
                             <button class="sublime-btn" onclick="copyCurrentCode()" title="Copiar Código">📋 Copiar</button>
-                            <button class="sublime-btn" id="btn-collapse-code" onclick="toggleCodeSubpanel()" title="Recolher Editor de Código (Focar na Árvore e Grafo)">◀ Recolher</button>
                         </div>
                     </div>
 
@@ -958,11 +954,14 @@ class ArchitectureVisualizer:
     <div id="network-container" style="flex:1; position:relative; height:100%; width:100%;">
         <!-- Barra de Ferramentas Flutuante do Grafo -->
         <div id="graph-toolbar" style="position:absolute; top:12px; left:16px; z-index:90; display:flex; gap:6px; background:rgba(22,23,27,0.85); backdrop-filter:blur(8px); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center;">
-            <button class="sublime-btn" id="btn-reorganize" onclick="reorganizeGraph()" title="Reorganizar Layout do Grafo Suavemente">🔄 Reorganizar</button>
-            <button class="sublime-btn" id="btn-physics" onclick="togglePhysics()" title="Alternar Física de Colisão">⚡ Física: Off</button>
-            <button class="sublime-btn" id="btn-fit" onclick="resetGraphView()" title="Centralizar e Enquadrar Todos os Nós">🔍 Enquadrar</button>
             <button class="sublime-btn" id="btn-collapse-graph" onclick="toggleGraphPanel()" title="Recolher Grafo (Modo Código Tela Cheia)">▶ Ocultar Grafo</button>
             <span id="graph-nodes-count" style="font-size:11px; color:#a6adc8; align-self:center; margin-left:6px; font-weight:600;">-- nós</span>
+            <span style="display:flex; align-items:center; gap:4px; font-size:11px; margin-left:8px; color:#66d9ef;">
+                <span style="display:inline-block; width:12px; height:2px; background:#66d9ef;"></span> ➔ Envio
+            </span>
+            <span style="display:flex; align-items:center; gap:4px; font-size:11px; margin-left:6px; color:#fd971f;">
+                <span style="display:inline-block; width:12px; height:2px; background:#fd971f;"></span> ➔ Recebe
+            </span>
         </div>
         <div id="network" style="width:100%; height:100%;"></div>
     </div>
@@ -1082,6 +1081,7 @@ class ArchitectureVisualizer:
         const allNodesMap = new Map();
         rawNodes.forEach(n => allNodesMap.set(n.id, n));
         let physicsRunning = false;
+        let currentFocusId = null;
 
         // Mapeia classes contidas em cada arquivo para rotulagem limpa unificada
         const fileClassesMap = new Map();
@@ -1090,7 +1090,7 @@ class ArchitectureVisualizer:
             fileClassesMap.get(c.parentId).push(c.label);
         }});
 
-        function formatVisNode(n) {{
+        function formatVisNode(n, isFocal = false, distance = 0) {{
             const classes = fileClassesMap.get(n.id) || [];
             let label = "📁 " + n.label;
             if (classes.length === 1) {{
@@ -1102,31 +1102,24 @@ class ArchitectureVisualizer:
             return {{
                 id: n.id,
                 label: label,
-                title: n.title + (classes.length ? "\\n🏛️ Classes: " + classes.join(", ") : ""),
+                title: n.title + (classes.length ? "\\n🏛️ Classes: " + classes.join(", ") : "") + (isFocal ? "\\n🎯 [Elemento em Foco]" : `\\n📍 Distância: ${{distance}}º nível`),
                 color: {{
-                    background: hasClasses ? "#1e1e2e" : "#261c14",
-                    border: n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (hasClasses ? "#89b4fa" : "#fab387"))
+                    background: isFocal ? "#272822" : (hasClasses ? "#1e1e2e" : "#261c14"),
+                    border: isFocal ? "#a6e22e" : (n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (hasClasses ? "#89b4fa" : "#fab387")))
                 }},
-                borderWidth: (n.git === "new" || n.git === "modified") ? 2.5 : 2,
+                borderWidth: isFocal ? 4 : ((n.git === "new" || n.git === "modified") ? 2.5 : 2),
                 shape: "dot",
-                size: hasClasses ? 15 : 11,
+                size: isFocal ? 22 : (hasClasses ? 15 : 11),
                 shapeProperties: {{
                     borderDashes: false
                 }},
                 font: {{
-                    color: hasClasses ? "#cdd6f4" : "#fab387",
-                    size: 10,
+                    color: isFocal ? "#a6e22e" : (hasClasses ? "#cdd6f4" : "#fab387"),
+                    size: isFocal ? 12 : 10,
                     bold: true,
                     vadjust: 0
                 }}
             }};
-        }}
-
-        function getFilteredNodes() {{
-            // No Grafo cada arquivo/módulo é um Nó Componente Único e Limpo
-            return rawNodes
-                .filter(n => n.type === "file")
-                .map(n => formatVisNode(n));
         }}
 
         function resolveToGraphNodeId(id) {{
@@ -1146,48 +1139,114 @@ class ArchitectureVisualizer:
             return null;
         }}
 
-        const nodes = new vis.DataSet(getFilteredNodes());
+        // Algoritmo de Subgrafo por Vizinhança de até 2 Níveis (Ego-Graph)
+        function getTwoLevelNeighborhood(focusId) {{
+            if (!focusId) {{
+                const firstFile = rawNodes.find(n => n.type === "file");
+                if (firstFile) focusId = firstFile.id;
+                else return {{ focalId: null, nodeIds: new Set(), level1: new Set(), edges: [] }};
+            }}
+            const focalGId = resolveToGraphNodeId(focusId);
+            if (!focalGId) return {{ focalId: null, nodeIds: new Set(), level1: new Set(), edges: [] }};
 
-        function getFilteredEdges() {{
-            const graphNodeIds = new Set(nodes.getIds());
-            const edgeAggregator = new Map();
+            const graphNodeIds = new Set([focalGId]);
+            const level1Outbound = new Set();
+            const level1Inbound = new Set();
 
-            // Arestas de Dependência e Chamada entre Módulos
+            // Nível 1: Vizinhos diretos (Envio e Recebimento)
             rawEdges.forEach(e => {{
                 const src = resolveToGraphNodeId(e.source);
                 const tgt = resolveToGraphNodeId(e.target);
-                if (src && tgt && src !== tgt && graphNodeIds.has(src) && graphNodeIds.has(tgt)) {{
+                if (!src || !tgt || src === tgt) return;
+                if (src === focalGId) {{
+                    level1Outbound.add(tgt);
+                    graphNodeIds.add(tgt);
+                }}
+                if (tgt === focalGId) {{
+                    level1Inbound.add(src);
+                    graphNodeIds.add(src);
+                }}
+            }});
+
+            const level1All = new Set([...level1Outbound, ...level1Inbound]);
+
+            // Nível 2: Vizinhos de 2º grau
+            rawEdges.forEach(e => {{
+                const src = resolveToGraphNodeId(e.source);
+                const tgt = resolveToGraphNodeId(e.target);
+                if (!src || !tgt || src === tgt) return;
+                if (level1All.has(src) && tgt !== focalGId && !level1All.has(tgt)) {{
+                    graphNodeIds.add(tgt);
+                }}
+                if (level1All.has(tgt) && src !== focalGId && !level1All.has(src)) {{
+                    graphNodeIds.add(src);
+                }}
+            }});
+
+            // Arestas do subgrafo com cores semânticas (Azul = Envio, Laranja = Recebe)
+            const edgeAggregator = new Map();
+            rawEdges.forEach(e => {{
+                const src = resolveToGraphNodeId(e.source);
+                const tgt = resolveToGraphNodeId(e.target);
+                if (!src || !tgt || src === tgt) return;
+                if (graphNodeIds.has(src) && graphNodeIds.has(tgt)) {{
                     const key = `${{src}}->${{tgt}}`;
+                    const isOutboundFromFocus = (src === focalGId);
+                    const isInboundToFocus = (tgt === focalGId);
+
+                    let edgeColor = "rgba(108, 112, 134, 0.4)";
+                    let highlightColor = "#89b4fa";
+                    if (isOutboundFromFocus) {{
+                        edgeColor = "#66d9ef"; // Azul: Envio
+                        highlightColor = "#89b4fa";
+                    }} else if (isInboundToFocus) {{
+                        edgeColor = "#fd971f"; // Laranja: Recebe
+                        highlightColor = "#fab387";
+                    }}
+
                     if (!edgeAggregator.has(key)) {{
                         edgeAggregator.set(key, {{
                             id: key,
                             from: src,
                             to: tgt,
-                            arrows: {{ to: {{ enabled: true, scaleFactor: 0.5 }} }},
-                            color: {{
-                                color: "rgba(108, 112, 134, 0.28)",
-                                highlight: "#89b4fa",
-                                hover: "rgba(137, 180, 250, 0.45)",
-                                inherit: false
-                            }},
-                            smooth: {{ enabled: true, type: "continuous", roundness: 0.35 }},
-                            width: 1.0,
+                            arrows: {{ to: {{ enabled: true, scaleFactor: 0.75 }} }},
+                            color: {{ color: edgeColor, highlight: highlightColor, hover: highlightColor, inherit: false }},
+                            smooth: {{ enabled: true, type: "continuous", roundness: 0.3 }},
+                            width: (isOutboundFromFocus || isInboundToFocus) ? 2.2 : 1.2,
                             count: 1
                         }});
                     }} else {{
                         const existing = edgeAggregator.get(key);
-                        if (existing.count) {{
-                            existing.count++;
-                            existing.width = Math.min(2.5, 1.0 + existing.count * 0.2);
-                            existing.title = `${{existing.count}} conexões/chamadas`;
-                        }}
+                        existing.count++;
+                        existing.width = Math.min(3.5, existing.width + 0.3);
                     }}
                 }}
             }});
-
-            return Array.from(edgeAggregator.values());
+            return {{ focalId: focalGId, nodeIds: graphNodeIds, level1: level1All, edges: Array.from(edgeAggregator.values()) }};
         }}
 
+        function getFilteredNodes() {{
+            const sub = getTwoLevelNeighborhood(currentFocusId);
+            if (!sub.focalId || sub.nodeIds.size === 0) return [];
+            currentFocusId = sub.focalId;
+            const res = [];
+            sub.nodeIds.forEach(nid => {{
+                const raw = allNodesMap.get(nid);
+                if (raw) {{
+                    const isFocal = (nid === sub.focalId);
+                    const dist = isFocal ? 0 : (sub.level1.has(nid) ? 1 : 2);
+                    res.push(formatVisNode(raw, isFocal, dist));
+                }}
+            }});
+            return res;
+        }}
+
+        function getFilteredEdges() {{
+            const sub = getTwoLevelNeighborhood(currentFocusId);
+            return sub.edges;
+        }}
+
+        const nodes = new vis.DataSet(getFilteredNodes());
         const edges = new vis.DataSet(getFilteredEdges());
 
         const container = document.getElementById('network');
@@ -1213,9 +1272,6 @@ class ArchitectureVisualizer:
         window.network = network;
 
         network.once('stabilizationIterationsDone', () => {{
-            network.setOptions({{ physics: {{ enabled: false }} }});
-            physicsRunning = false;
-            updatePhysicsUI();
             network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
         }});
 
@@ -1232,36 +1288,7 @@ class ArchitectureVisualizer:
             edges.clear();
             edges.add(getFilteredEdges());
             updateNodesCount();
-        }}
-
-        function reorganizeGraph() {{
-            network.setOptions({{ physics: {{ enabled: true }} }});
-            network.stabilize(90);
-            setTimeout(() => {{
-                network.setOptions({{ physics: {{ enabled: false }} }});
-                physicsRunning = false;
-                updatePhysicsUI();
-                network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
-            }}, 500);
-        }}
-
-        function resetGraphView() {{
-            network.fit({{ animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }} }});
-        }}
-
-        function togglePhysics() {{
-            physicsRunning = !physicsRunning;
-            network.setOptions({{ physics: {{ enabled: physicsRunning }} }});
-            updatePhysicsUI();
-        }}
-
-        function updatePhysicsUI() {{
-            const btn = document.getElementById('btn-physics');
-            if (btn) {{
-                btn.innerText = physicsRunning ? '⚡ Física: On' : '⚡ Física: Off';
-                btn.style.color = physicsRunning ? '#a6e22e' : '';
-                btn.style.borderColor = physicsRunning ? '#a6e22e' : '';
-            }}
+            network.fit({{ animation: {{ duration: 300, easingFunction: 'easeInOutQuad' }} }});
         }}
 
         function updateNodesCount() {{
@@ -1342,16 +1369,17 @@ class ArchitectureVisualizer:
                 this.selectedId = nodeId;
                 this.currentNode = rawNodes.find(n => n.id === nodeId);
 
-                // A. Sincroniza o Grafo Vis.js
-                if (origin !== 'network') {{
-                    const targetGraphId = resolveToGraphNodeId(nodeId);
-                    if (targetGraphId && nodes.get(targetGraphId)) {{
-                        network.selectNodes([targetGraphId]);
-                        network.focus(targetGraphId, {{
-                            scale: 1.1,
-                            animation: {{ duration: 400, easingFunction: 'easeInOutQuad' }}
-                        }});
-                    }}
+                // A. Sincroniza o Grafo Vis.js (Subgrafo de 2 níveis focado no elemento)
+                const targetGraphId = resolveToGraphNodeId(nodeId);
+                if (targetGraphId && targetGraphId !== currentFocusId) {{
+                    currentFocusId = targetGraphId;
+                    refreshGraphData();
+                }} else if (targetGraphId && origin !== 'network') {{
+                    network.selectNodes([targetGraphId]);
+                    network.focus(targetGraphId, {{
+                        scale: 1.1,
+                        animation: {{ duration: 300, easingFunction: 'easeInOutQuad' }}
+                    }});
                 }}
 
                 // B. Sincroniza a Árvore de Arquivos
@@ -1360,7 +1388,11 @@ class ArchitectureVisualizer:
                 }}
 
                 // C. Atualiza o Inspetor de Métricas
-                this.updateInspector(nodeId);
+                try {{
+                    this.updateInspector(nodeId);
+                }} catch (e) {{
+                    console.error("Erro no updateInspector:", e);
+                }}
 
                 // D. Carrega o Código no Editor Monokai
                 if (this.currentNode) {{
@@ -1398,19 +1430,6 @@ class ArchitectureVisualizer:
                 placeholder.style.display = 'none';
                 content.style.display = 'flex';
 
-                document.getElementById('det-title').innerText = `${{node.label}} (${{node.type.toUpperCase()}})`;
-                
-                const gitBadgeEl = document.getElementById('det-git');
-                if (node.git === 'new') {{
-                    gitBadgeEl.innerHTML = '<span class="git-badge git-badge-new">+ Arquivo Não Rastreado (Novo)</span>';
-                }} else if (node.git === 'modified') {{
-                    gitBadgeEl.innerHTML = '<span class="git-badge git-badge-mod">~ Arquivo Modificado no Git</span>';
-                }} else {{
-                    gitBadgeEl.innerHTML = '';
-                }}
-
-                document.getElementById('det-doc').innerText = node.doc ? `💡 ${{node.doc}}` : "Sem docstring registrada.";
-                document.getElementById('det-file').innerText = `${{node.file}}:${{node.line}}`;
                 document.getElementById('det-ca').innerText = node.ca;
                 document.getElementById('det-ce').innerText = node.ce;
                 document.getElementById('det-inst').innerText = node.instability;
@@ -1725,10 +1744,8 @@ class ArchitectureVisualizer:
         let savedSidebarWidthBeforeCollapse = null;
 
         function toggleCodeSubpanel(forceState) {{
-            const editor = document.getElementById('editor-subpanel');
-            const resizer = document.getElementById('internal-resizer');
-            const btnReopenCode = document.getElementById('btn-reopen-code');
-            const navSubpanel = document.getElementById('nav-subpanel');
+            const workspaceBody = document.querySelector('.workspace-body');
+            const btnStage = document.getElementById('btn-collapse-stage');
             const sidebar = document.getElementById('sidebar');
 
             if (typeof forceState === 'boolean') {{
@@ -1738,18 +1755,19 @@ class ArchitectureVisualizer:
             }}
 
             if (isCodeCollapsed) {{
-                editor.style.display = 'none';
-                resizer.style.display = 'none';
-                btnReopenCode.style.display = 'inline-flex';
-                savedSidebarWidthBeforeCollapse = sidebar.offsetWidth;
-                const navW = navSubpanel ? (navSubpanel.offsetWidth || 300) : 300;
-                updateSidebarWidth(navW + 2);
-            }} else {{
-                editor.style.display = 'flex';
-                if (!navSubpanel.classList.contains('hidden')) {{
-                    resizer.style.display = 'block';
+                workspaceBody.classList.add('code-collapsed');
+                if (btnStage) {{
+                    btnStage.innerHTML = '▶';
+                    btnStage.title = 'Mostrar Editor de Código';
                 }}
-                btnReopenCode.style.display = 'none';
+                savedSidebarWidthBeforeCollapse = sidebar.offsetWidth;
+                updateSidebarWidth(Math.max(280, Math.min(savedSidebarWidthBeforeCollapse, 360)));
+            }} else {{
+                workspaceBody.classList.remove('code-collapsed');
+                if (btnStage) {{
+                    btnStage.innerHTML = '◀';
+                    btnStage.title = 'Ocultar Editor de Código';
+                }}
                 const targetW = savedSidebarWidthBeforeCollapse || 680;
                 updateSidebarWidth(Math.max(500, targetW));
             }}
@@ -1856,7 +1874,8 @@ class ArchitectureVisualizer:
 
         window.addEventListener('mousemove', (e) => {{
             if (!isResizing) return;
-            const newWidth = Math.max(380, Math.min(window.innerWidth - 200, e.clientX));
+            const minW = isCodeCollapsed ? 200 : 380;
+            const newWidth = Math.max(minW, Math.min(window.innerWidth - 200, e.clientX));
             updateSidebarWidth(newWidth);
         }});
 
