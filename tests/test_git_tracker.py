@@ -58,6 +58,33 @@ class TestGitTracker(unittest.TestCase):
         self.assertEqual(status_map.get(f2_path), GitStatusType.NEW)
         self.assertEqual(status_map.get(f1_path), GitStatusType.MODIFIED)
 
+    def test_tree_builder_reflects_git_status(self):
+        from core.tree import ProjectTreeBuilder
+        subprocess.run(["git", "init"], cwd=self.temp_dir, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=self.temp_dir, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=self.temp_dir, capture_output=True)
+
+        f1_path = os.path.join(self.temp_dir, "tracked.py")
+        with open(f1_path, "w") as f:
+            f.write("print('1')")
+        subprocess.run(["git", "add", "tracked.py"], cwd=self.temp_dir, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=self.temp_dir, capture_output=True)
+
+        # Modifica tracked.py e cria new_by_ai.py
+        with open(f1_path, "a") as f:
+            f.write("\nprint('2')")
+        f2_path = os.path.join(self.temp_dir, "new_by_ai.py")
+        with open(f2_path, "w") as f:
+            f.write("print('ai')")
+
+        builder = ProjectTreeBuilder(self.temp_dir, {})
+        tree = builder.build()
+        data = tree.to_dict()
+
+        files_status = {c["name"]: c.get("git_status") for c in data["children"]}
+        self.assertEqual(files_status.get("new_by_ai.py"), GitStatusType.NEW)
+        self.assertEqual(files_status.get("tracked.py"), GitStatusType.MODIFIED)
+
 
 if __name__ == "__main__":
     unittest.main()

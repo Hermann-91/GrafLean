@@ -38,12 +38,13 @@ class ArchitectureWatcher:
 
     WATCH_EXTENSIONS = (
         ".php", ".py", ".js", ".ts", ".jsx", ".tsx",
-        ".blade.php", ".html", ".css", ".json", ".md"
+        ".blade.php", ".html", ".css", ".json", ".md",
+        ".sh", ".bash", ".yaml", ".yml", ".sql", ".xml"
     )
 
     IGNORE_DIRS = {
         ".git", "node_modules", "vendor", "__pycache__",
-        ".idea", ".vscode", "dist", "build", ".gemini"
+        ".venv", "venv", "dist", "build"
     }
 
     def __init__(self, target_dir: str, port: int = 7357, poll_interval: float = 0.8):
@@ -122,8 +123,16 @@ class ArchitectureWatcher:
                         file_sources[f_path] = f.read()
                 except Exception:
                     pass
+        from core.git_tracker import GitTracker
+        try:
+            git_status_map = GitTracker(self.graph.root_dir).get_status_map()
+        except Exception:
+            git_status_map = {}
+
         nodes_data = []
         for node in self.graph.nodes.values():
+            if node.file_path in git_status_map:
+                node.git_status = git_status_map[node.file_path]
             m = node.metrics
             doc_text = f"💡 {node.docstring}" if node.docstring else "Sem descrição."
             tooltip = f"🏷️ {node.name} ({node.symbol_type.value.upper()})\n{doc_text}"
