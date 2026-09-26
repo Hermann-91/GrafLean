@@ -196,28 +196,6 @@ class ArchitectureVisualizer:
             box-shadow: 0 0 12px rgba(102, 217, 239, 0.8) !important;
         }}
 
-        /* Header Superior do Workspace */
-        .workspace-header {{
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #000000;
-        }}
-        .brand-title {{
-            font-size: 15px;
-            font-weight: 700;
-            color: #66d9ef;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }}
-        .brand-sub {{
-            font-size: 11px;
-            color: #75715e;
-        }}
-
         /* Layout Dividido: Coluna de Navegação + Coluna de Código */
         .workspace-body {{
             display: flex;
@@ -255,39 +233,76 @@ class ArchitectureVisualizer:
             display: none !important;
         }}
 
-        .nav-header-tabs {{
+        /* Header Minimalista da Navegação */
+        .nav-top-header {{
+            height: 38px;
+            min-height: 38px;
+            padding: 0 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 6px;
             background: #000000;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 4px 6px 0;
+            box-sizing: border-box;
+        }}
+        .nav-hub-btn {{
+            padding: 4px 7px;
+            font-size: 13px;
+            line-height: 1;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #66d9ef;
+            background: #141414;
+            border: 1px solid #282828;
+            transition: all 0.15s ease;
+        }}
+        .nav-hub-btn:hover {{
+            background: rgba(102, 217, 239, 0.2);
+            border-color: #66d9ef;
+            color: #66d9ef;
+            transform: scale(1.05);
+        }}
+        .nav-project-title {{
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #f8f8f2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }}
+        .nav-icon-tabs {{
+            display: flex;
+            align-items: center;
             gap: 4px;
         }}
         .nav-tab-btn {{
-            flex: 1;
-            padding: 7px 6px;
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid transparent;
+            padding: 4px 7px;
+            background: #141414;
+            border: 1px solid #282828;
+            border-radius: 4px;
             color: #75715e;
-            font-size: 12.5px;
-            font-weight: 600;
+            font-size: 12px;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
             transition: all 0.15s ease;
-            white-space: nowrap;
         }}
         .nav-tab-btn:hover {{
             color: #f8f8f2;
+            border-color: #66d9ef;
         }}
         .nav-tab-btn.active {{
             color: #66d9ef;
-            border-bottom-color: #66d9ef;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px 4px 0 0;
+            background: rgba(102, 217, 239, 0.15);
+            border-color: #66d9ef;
+            box-shadow: 0 0 6px rgba(102, 217, 239, 0.3);
         }}
         .nav-toggle-btn {{
             padding: 4px 8px;
@@ -651,15 +666,18 @@ class ArchitectureVisualizer:
             height: 100%;
         }}
         .sublime-tab-header {{
+            height: 38px;
+            min-height: 38px;
+            box-sizing: border-box;
             display: flex;
             align-items: center;
             justify-content: space-between;
             background: #000000;
             padding: 0 8px;
-            border-bottom: 1px solid #1a1a1a;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             font-size: 12px;
-            overflow-x: auto;
-            gap: 8px;
+            overflow: hidden;
+            gap: 6px;
         }}
         .sublime-tabs-track {{
             display: flex;
@@ -1130,37 +1148,19 @@ class ArchitectureVisualizer:
 </head>
 <body>
     <div id="sidebar">
-        <!-- Header do Workspace -->
-        <div class="workspace-header">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <a href="/" class="sublime-btn" style="text-decoration:none; font-weight:700; color:#66d9ef; border-color:#282828;" title="Ir para a Biblioteca de Projetos">
-                    🏛️ GrafLean | ◀ Biblioteca
-                </a>
-                <span class="brand-sub" style="font-size:11px; color:#75715e;">📁 {project_name}</span>
-            </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-                <button class="sublime-btn" id="btn-find-in-files" onclick="openFindInFiles()" title="Localizar Texto nos Arquivos (Ctrl+Shift+F)">
-                    🔎 Texto (Ctrl+Shift+F)
-                </button>
-                <button class="sublime-btn" id="btn-quick-open" onclick="openQuickPalette()" title="Busca Rápida de Arquivos e Símbolos (Ctrl+P)">
-                    🔍 Arquivos (Ctrl+P)
-                </button>
-                <button class="sublime-btn" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Alternar Visibilidade do Grafo">
-                    🌐 Grafo
-                </button>
-                <button class="sublime-btn" id="btn-collapse-stage" onclick="toggleCodeSubpanel()" style="background:#141414; border-color:#282828; color:#f8f8f2; font-weight:bold; padding:4px 10px;" title="Ocultar/Mostrar Editor de Código">
-                    ◀
-                </button>
-            </div>
-        </div>
-
         <!-- Corpo Dividido: Árvore/Inspetor à esquerda + Código no centro -->
         <div class="workspace-body">
             <!-- 1. Sub-Painel de Navegação -->
             <div id="nav-subpanel">
-                <div class="nav-header-tabs">
-                    <button class="nav-tab-btn active" id="subtab-btn-tree" onclick="switchNavTab('tree')">📁 Árvore</button>
-                    <button class="nav-tab-btn" id="subtab-btn-inspector" onclick="switchNavTab('inspector')">ℹ️ Inspetor</button>
+                <div class="nav-top-header">
+                    <a href="/" class="sublime-btn nav-hub-btn" id="btn-hub-link" title="🏛️ GrafLean | ◀ Biblioteca (Hub)">🏛️</a>
+                    <span class="nav-project-title" title="{project_name}">📁 {project_name}</span>
+                    <div class="nav-icon-tabs">
+                        <button class="nav-tab-btn active" id="subtab-btn-tree" onclick="switchNavTab('tree')" title="Árvore de Arquivos">📁</button>
+                        <button class="nav-tab-btn" id="subtab-btn-inspector" onclick="switchNavTab('inspector')" title="Inspetor de Métricas Arquiteturais">ℹ️</button>
+                        <button class="sublime-btn" id="btn-nav-reopen-code" onclick="toggleCodeSubpanel(false)" style="display:none; color:#f8f8f2; font-weight:bold; padding:4px 8px;" title="Reabrir Editor de Código">▶</button>
+                        <button class="sublime-btn" id="btn-nav-reopen-graph" onclick="toggleGraphPanel(false)" style="display:none; color:#66d9ef; font-weight:bold; padding:4px 8px;" title="Reabrir Grafo">🌐</button>
+                    </div>
                 </div>
 
                 <!-- Sub-aba 1: Árvore de Arquivos -->
@@ -1170,8 +1170,6 @@ class ArchitectureVisualizer:
                         <input type="text" class="search-input" id="search" placeholder="Filtrar arquivos ou classes..." oninput="onSearchInput(this.value)">
                         <button onclick="openFindInFiles()" title="Buscar texto nos arquivos (Ctrl+Shift+F)" style="background:transparent; border:none; color:#75715e; cursor:pointer; font-size:12px; padding:0 4px;" onmouseover="this.style.color='#66d9ef'" onmouseout="this.style.color='#75715e'">📝</button>
                     </div>
-
-
 
                     <div class="tree-container" id="tree-root"></div>
                 </div>
@@ -1222,9 +1220,11 @@ class ArchitectureVisualizer:
                         <!-- Trilho de Múltiplas Abas de Arquivos (Sublime OLED) -->
                         <div class="sublime-tabs-track" id="sublime-tabs-track"></div>
                         <div class="sublime-toolbar-actions">
-                            <button class="sublime-btn" id="btn-toggle-edit" onclick="toggleEditMode()" title="Alternar entre Leitura e Edição">✏️ Editar</button>
-                            <button class="sublime-btn" id="btn-save-code" onclick="saveCurrentCode()" style="display:none; background:#a6e22e; color:#000000; font-weight:700; border-color:#a6e22e;" title="Salvar Alterações no Disco (Ctrl+S)">💾 Salvar</button>
-                            <button class="sublime-btn" onclick="copyCurrentCode()" title="Copiar Código">📋 Copiar</button>
+                            <button class="sublime-btn" id="btn-save-code" onclick="saveCurrentCode()" style="display:none; background:#a6e22e; color:#000000; font-weight:700; border-color:#a6e22e; padding:3px 8px;" title="Salvar Alterações no Disco (Ctrl+S)">💾 Salvar</button>
+                            <button class="sublime-btn" id="btn-toggle-edit" onclick="toggleEditMode()" style="padding:3px 8px;" title="Entrar em Modo Edição">✏️</button>
+                            <button class="sublime-btn" onclick="copyCurrentCode()" style="padding:3px 8px;" title="Copiar Código (Área de Transferência)">📋</button>
+                            <button class="sublime-btn" id="btn-reopen-graph-stage" onclick="toggleGraphPanel(false)" style="display:none; color:#66d9ef; font-weight:bold; padding:3px 8px;" title="Reabrir Grafo">🌐</button>
+                            <button class="sublime-btn" id="btn-collapse-stage" onclick="toggleCodeSubpanel()" style="background:#141414; border-color:#282828; color:#f8f8f2; font-weight:bold; padding:3px 8px;" title="Ocultar/Mostrar Editor de Código">◀</button>
                         </div>
                     </div>
 
@@ -1258,20 +1258,26 @@ class ArchitectureVisualizer:
     <button id="sidebar-reopen-btn" class="sublime-btn" onclick="toggleSidebar()" style="display:none; position:absolute; top:12px; left:12px; z-index:150; height:31px; padding:6px 11px; font-weight:bold; background:#141414; border:1px solid #282828; color:#66d9ef;" title="Reabrir Barra Lateral">▶</button>
 
     <div id="network-container" style="flex:1; position:relative; height:100%; width:100%;">
-        <!-- Barra de Ferramentas Flutuante do Grafo -->
-        <div id="graph-toolbar" style="position:absolute; top:12px; left:16px; z-index:90; display:flex; gap:6px; background:rgba(10,10,10,0.85); backdrop-filter:blur(8px); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center;">
-            <button class="sublime-btn" id="btn-collapse-graph" onclick="toggleGraphPanel()" title="Recolher Grafo (Modo Código Tela Cheia)">▶ Ocultar Grafo</button>
-            <select id="select-graph-depth" onchange="setGraphDepth(this.value)" class="sublime-btn" style="background:#141414; color:#f8f8f2; border:1px solid #282828; padding:3px 8px; font-size:11px; border-radius:4px; cursor:pointer; outline:none;" title="Profundidade de Conexões do Grafo">
-                <option value="1" selected>🎯 Fase 1 (Direto)</option>
-                <option value="2">🌐 Fase 2 (Transitivo)</option>
-            </select>
-            <span id="graph-nodes-count" style="font-size:11px; color:#75715e; align-self:center; margin-left:6px; font-weight:600;">-- nós</span>
-            <span style="display:flex; align-items:center; gap:4px; font-size:11px; margin-left:8px; color:#66d9ef;">
-                <span style="display:inline-block; width:12px; height:2px; background:#66d9ef;"></span> ➔ Envio
-            </span>
-            <span style="display:flex; align-items:center; gap:4px; font-size:11px; margin-left:6px; color:#fd971f;">
-                <span style="display:inline-block; width:12px; height:2px; background:#fd971f;"></span> ➔ Recebe
-            </span>
+        <!-- Barra de Ferramentas Superior do Grafo -->
+        <div id="graph-toolbar" style="position:absolute; top:0; left:0; right:0; height:38px; box-sizing:border-box; z-index:90; display:flex; align-items:center; justify-content:space-between; background:#000000; padding:0 10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <select id="select-graph-depth" onchange="setGraphDepth(this.value)" class="sublime-btn" style="background:#141414; color:#f8f8f2; border:1px solid #282828; padding:3px 8px; font-size:11px; border-radius:4px; cursor:pointer; outline:none;" title="Profundidade de Conexões do Grafo">
+                    <option value="1" selected>🎯 Fase 1</option>
+                    <option value="2">🌐 Fase 2</option>
+                </select>
+                <span id="graph-nodes-count" style="font-size:11px; color:#75715e; align-self:center; margin-left:4px; font-weight:600;">-- nós</span>
+                <span style="display:flex; align-items:center; gap:3px; font-size:11px; margin-left:6px; color:#66d9ef;" title="Conexões de Envio (Quem este elemento chama)">
+                    <span style="display:inline-block; width:10px; height:2px; background:#66d9ef;"></span> ↑
+                </span>
+                <span style="display:flex; align-items:center; gap:3px; font-size:11px; margin-left:4px; color:#fd971f;" title="Conexões de Entrada (Quem chama este elemento)">
+                    <span style="display:inline-block; width:10px; height:2px; background:#fd971f;"></span> ↓
+                </span>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+                <button class="sublime-btn" id="btn-quick-open" onclick="openQuickPalette()" title="Busca Rápida de Arquivos e Símbolos (Ctrl+P)" style="padding:3px 8px;">🔍</button>
+                <button class="sublime-btn" id="btn-find-in-files" onclick="openFindInFiles()" title="Localizar Texto nos Arquivos (Ctrl+Shift+F)" style="padding:3px 8px;">📝</button>
+                <button class="sublime-btn" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Ocultar/Expandir Grafo (Tela Cheia de Código)" style="color:#66d9ef; font-weight:bold; padding:3px 8px;">🌐</button>
+            </div>
         </div>
         <div id="network" style="width:100%; height:100%;"></div>
     </div>
@@ -2343,6 +2349,7 @@ class ArchitectureVisualizer:
         function toggleCodeSubpanel(forceState) {{
             const workspaceBody = document.querySelector('.workspace-body');
             const btnStage = document.getElementById('btn-collapse-stage');
+            const btnNavReopenCode = document.getElementById('btn-nav-reopen-code');
             const sidebar = document.getElementById('sidebar');
 
             if (typeof forceState === 'boolean') {{
@@ -2353,6 +2360,7 @@ class ArchitectureVisualizer:
 
             if (isCodeCollapsed) {{
                 workspaceBody.classList.add('code-collapsed');
+                if (btnNavReopenCode) btnNavReopenCode.style.display = 'inline-flex';
                 if (btnStage) {{
                     btnStage.innerHTML = '▶';
                     btnStage.title = 'Mostrar Editor de Código';
@@ -2361,6 +2369,7 @@ class ArchitectureVisualizer:
                 updateSidebarWidth(Math.max(280, Math.min(savedSidebarWidthBeforeCollapse, 360)));
             }} else {{
                 workspaceBody.classList.remove('code-collapsed');
+                if (btnNavReopenCode) btnNavReopenCode.style.display = 'none';
                 if (btnStage) {{
                     btnStage.innerHTML = '◀';
                     btnStage.title = 'Ocultar Editor de Código';
@@ -2381,6 +2390,7 @@ class ArchitectureVisualizer:
             const sidebarToggle = document.getElementById('sidebar-toggle');
             const sidebar = document.getElementById('sidebar');
             const btnToggleGraph = document.getElementById('btn-toggle-graph');
+            const btnNavReopenGraph = document.getElementById('btn-nav-reopen-graph');
 
             if (typeof forceState === 'boolean') {{
                 isGraphCollapsed = forceState;
@@ -2388,6 +2398,7 @@ class ArchitectureVisualizer:
                 isGraphCollapsed = !isGraphCollapsed;
             }}
 
+            const btnReopenStage = document.getElementById('btn-reopen-graph-stage');
             if (isGraphCollapsed) {{
                 networkContainer.style.display = 'none';
                 if (resizer) resizer.style.display = 'none';
@@ -2396,8 +2407,10 @@ class ArchitectureVisualizer:
                 sidebar.style.width = '100%';
                 sidebar.style.minWidth = '100%';
                 sidebar.style.maxWidth = '100%';
+                if (btnNavReopenGraph) btnNavReopenGraph.style.display = 'inline-flex';
+                if (btnReopenStage) btnReopenStage.style.display = 'inline-flex';
                 if (btnToggleGraph) {{
-                    btnToggleGraph.innerHTML = '🌐 Reabrir Grafo';
+                    btnToggleGraph.title = 'Reabrir Grafo';
                     btnToggleGraph.style.background = '#272822';
                     btnToggleGraph.style.color = '#a6e22e';
                     btnToggleGraph.style.borderColor = '#a6e22e';
@@ -2410,10 +2423,12 @@ class ArchitectureVisualizer:
                 sidebar.style.width = prevW;
                 sidebar.style.minWidth = '380px';
                 sidebar.style.maxWidth = '90vw';
+                if (btnNavReopenGraph) btnNavReopenGraph.style.display = 'none';
+                if (btnReopenStage) btnReopenStage.style.display = 'none';
                 if (btnToggleGraph) {{
-                    btnToggleGraph.innerHTML = '🌐 Grafo';
+                    btnToggleGraph.title = 'Ocultar Grafo';
                     btnToggleGraph.style.background = '';
-                    btnToggleGraph.style.color = '';
+                    btnToggleGraph.style.color = '#66d9ef';
                     btnToggleGraph.style.borderColor = '';
                 }}
                 if (window.network) {{
@@ -2614,7 +2629,8 @@ class ArchitectureVisualizer:
                     textarea.focus();
                 }}
 
-                btnEdit.innerHTML = '👁️ Visualizar';
+                btnEdit.innerHTML = '👁️';
+                btnEdit.title = 'Voltar para Modo Visualização';
                 btnEdit.style.background = '#fd971f';
                 btnEdit.style.color = '#000000';
                 btnSave.style.display = 'inline-flex';
@@ -2626,7 +2642,8 @@ class ArchitectureVisualizer:
                 }}
                 textarea.style.display = 'none';
                 tableContainer.style.display = 'block';
-                btnEdit.innerHTML = '✏️ Editar';
+                btnEdit.innerHTML = '✏️';
+                btnEdit.title = 'Entrar em Modo Edição';
                 btnEdit.style.background = '';
                 btnEdit.style.color = '';
                 btnSave.style.display = 'none';
