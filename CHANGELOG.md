@@ -4,6 +4,30 @@ Todas as alterações relevantes do **GrafLean** são documentadas neste arquivo
 
 ---
 
+## [2.1.0] - 2026-09-26
+
+### ✨ Adicionado
+- **Header Minimalista e Nivelado em Linha Única (38px)**:
+  - Eliminação completa de cabeçalhos empilhados, liberando cerca de 38px de altura útil vertical de tela para código e grafo.
+  - Alinhamento horizontal contínuo entre as 3 zonas da IDE:
+    - **Zona 1 (Navegação):** Botão `🏛️` (Hub), nome do projeto, `📁` (Árvore), `ℹ️` (Inspetor) e campo de busca logo abaixo com atalho `📝` para busca global.
+    - **Zona 2 (Editor de Código):** Trilho de abas, botão `💾 Salvar` dinâmico em verde neon Monokai (`#a6e22e`) visível apenas em modo de edição, alternador `✏️` / `👁️`, botão `📋` (Copiar) e `◀` (Recolher editor).
+    - **Zona 3 (Grafo):** Seletor de profundidade `[🎯 Fase 1]`, contadores compactos, setas de fluxo `↑` (Envio) / `↓` (Recebe), atalhos `🔍` (Ctrl+P), `📝` (Ctrl+Shift+F) e botão `🌐` (Ocultar/Expandir Grafo).
+- **Preservação de Atalhos ao Recolher Painéis (Reabertura Instantânea)**:
+  - Injeção de botões dinâmicos de restauração (`▶` para Código e `🌐` para Grafo) na barra de navegação superior, garantindo que o usuário nunca fique preso quando os painéis forem recolhidos.
+- **Cápsula Ultra-Discreta de Controle (Inferior Direito)**:
+  - Design minimalista Monokai Glassmorphic de 10px em fundo escuro semitransparente com blur, substituindo o antigo bloco chamativo.
+  - **Interruptor Ligar/Pausar (1 clique):** Alterna entre `🟢 Ao Vivo` e `⚪ Pausado`, permitindo suspender o polling de disco e economizar CPU/bateria enquanto programa.
+  - **Botão `⏻` (Desligar Python e Fechar Janela):** Solicita confirmação rápida, encerra o processo Python no terminal via `POST /api/shutdown` e fecha a janela do navegador automaticamente (`window.close()`).
+- **Endpoint `POST /api/shutdown`**:
+  - Implementado tanto no `HubServer` quanto no `ArchitectureWatcher` com encerramento seguro desacoplado via thread.
+  - Botão `⏻` adicionado também ao cabeçalho da Biblioteca de Projetos do Hub.
+
+### 🧪 Testes
+- Expansão da suíte automatizada para **71 testes unitários e de integração** executados com 100% de aprovação.
+
+---
+
 ## [2.0.0] - 2026-09-26
 
 ### ✨ Adicionado

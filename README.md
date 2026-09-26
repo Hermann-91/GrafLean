@@ -20,6 +20,9 @@ O **GrafLean** soluciona esse gargalo operando como uma **IDE de raio-X arquitet
 ## 🌟 Principais Recursos
 
 ### 1. 🖥️ Workspace Integrado de IDE (Estilo Sublime / JetBrains)
+* **Header Minimalista e Nivelado (38px):** Linha contínua horizontal alinhando Navegação, Trilho de Abas do Editor e Toolbar do Grafo sem degraus verticais, liberando espaço útil para visualização do código.
+  * **Preservação de Atalhos:** Ao recolher o código ou o grafo, botões dinâmicos de reabertura (`▶` e `🌐`) surgem na barra de navegação para restauração imediata em 1 clique.
+  * **Cápsula Ultra-Discreta de Controle (Inferior Direito):** Alternador de 1 clique entre `🟢 Ao Vivo` e `⚪ Pausado` para economizar CPU/bateria, acompanhado do botão `⏻` para desligar o processo Python e fechar a janela automaticamente.
 * **Coluna de Navegação Lateral:**
   * **[📁 Árvore]:** Visão hierárquica com dotfiles liberados (`.env`, `.gitignore`, etc.), ícones temáticos e contadores de símbolos com busca dinâmica.
   * **[ℹ️ Inspetor]:** Diagnóstico arquitetural instantâneo com Métricas de Robert C. Martin ($C_a$, $C_e$, $I$), docstrings e listas diretas de chamadores (*Inbound*) e dependências (*Outbound*).
@@ -133,13 +136,13 @@ graf-lens-new md docs/specs/TASK_CHECKOUT.md --template task
 
 ## 🧪 Suíte de Testes Automatizados
 
-Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (**70 testes automatizados** executando em menos de 1 segundo com 100% de sucesso):
+Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (**71 testes automatizados** executando em ~1.4s com 100% de sucesso):
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
 ```text
-Ran 70 tests in 0.988s
+Ran 71 tests in 1.477s
 OK
 ```
 
