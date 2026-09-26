@@ -31,11 +31,14 @@ O **GrafLean** soluciona esse gargalo operando como uma **IDE de raio-X arquitet
   * Divisor interno entre Árvore e Editor de Código.
   * Divisor externo entre o Workspace de Código e o Grafo.
 * **Painel Direito — Grafo Top-Down Interativo:**
-  * Renderização interativa via Vis.js com física e sincronização bidirecional (*Mediator Pattern*): ao clicar em um nó no grafo, a árvore se abre e o editor rola até a linha exata.
+  * **Seletor de Profundidade (Fase 1 vs Fase 2):** Alternância instantânea entre 🎯 *Fase 1 (Foco Direto)* e 🌐 *Fase 2 (Visão Transitiva)*, eliminando a poluição visual em projetos densos ou com super-hubs.
+  * **Navegação Desacoplada e Ergonômica:** **1 clique** no nó foca e inspeciona dependências e métricas no Inspetor mantendo o código aberto na tela; **2 cliques** confirmam a troca ativa de arquivo no editor e na árvore.
+  * **Física Contínua e Suave:** Visualização orgânica com reposicionamento dinâmico sem congelamento da interface.
 
-### 2. ⚡ Live Reload em Tempo Real (`graf-lens-watch`)
-* **Sincronização Contínua com IA:** Monitora alterações de arquivos em background sem consumir CPU.
-* **Server-Sent Events (SSE):** Quando você ou a IA cria ou altera um arquivo (`.php`, `.py`, `.js`, etc.), o grafo e o editor re-escaneiam e atualizam a tela em tempo real.
+### 2. ⚡ Performance Instantânea & Live Reload em Tempo Real
+* **Carregamento Instantâneo (< 50ms) com Lazy Loading:** O servidor entrega a IDE de imediato sem leitura em massa de disco. O código de cada arquivo é buscado sob demanda apenas ao ser clicado (`/api/file-content`), otimizando projetos gigantes (como robôs de trading com mais de 2.200 nós).
+* **Abertura Pronta com Árvore e Código:** Ao entrar no workspace, a árvore de arquivos já está pronta e o primeiro arquivo já abre no editor Monokai sem espera.
+* **Sincronização Contínua Reativa (SSE):** Quando você ou a IA cria, altera ou exclui arquivos, o grafo e a árvore atualizam instantaneamente sem necessidade de recarregar a página (sem F5).
 * **Preservação de Estado:** Ao recarregar, o sistema memoriza exatamente qual arquivo, linha e aba estavam ativos via `sessionStorage`.
 
 ### 3. 🎯 Rastreamento Git Instantâneo (< 5ms)
@@ -110,13 +113,13 @@ graf-lens-new md docs/specs/TASK_CHECKOUT.md --template task
 
 ## 🧪 Suíte de Testes Automatizados
 
-Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (26 testes automatizados executando em menos de 200 milissegundos):
+Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (63 testes automatizados executando em menos de 800 milissegundos):
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
 ```text
-Ran 26 tests in 0.183s
+Ran 63 tests in 0.789s
 OK
 ```
 
