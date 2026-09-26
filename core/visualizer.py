@@ -2734,13 +2734,74 @@ class ArchitectureVisualizer:
             }});
         }}
 
+        // 10. Controle do Modo Ao Vivo e Encerramento Gracioso
+        let isLiveWatchActive = true;
+        let evtSource = null;
+
+        function toggleLiveWatch() {{
+            isLiveWatchActive = !isLiveWatchActive;
+            const dot = document.getElementById('live-status-dot');
+            const text = document.getElementById('live-status-text');
+            const btnToggle = document.getElementById('btn-toggle-live');
+
+            if (isLiveWatchActive) {{
+                if (dot) {{ dot.style.background = '#a6e22e'; dot.style.boxShadow = '0 0 5px #a6e22e'; }}
+                if (text) {{ text.style.color = '#a6e22e'; text.innerText = 'Ao Vivo'; }}
+                if (btnToggle) btnToggle.title = 'Clique para pausar a sincronização em tempo real';
+                connectSSE();
+                fetchLiveUpdate();
+                showToast('▶ Monitoramento Ao Vivo ativado');
+            }} else {{
+                if (dot) {{ dot.style.background = '#75715e'; dot.style.boxShadow = 'none'; }}
+                if (text) {{ text.style.color = '#75715e'; text.innerText = 'Pausado'; }}
+                if (btnToggle) btnToggle.title = 'Clique para religar a sincronização em tempo real';
+                if (evtSource) {{
+                    evtSource.close();
+                    evtSource = null;
+                }}
+                showToast('⏸️ Monitoramento Ao Vivo pausado');
+            }}
+        }}
+
+        function shutdownServer() {{
+            if (!confirm("Deseja realmente desligar o servidor GrafLean? O processo Python será encerrado e a janela será fechada.")) return;
+            fetch('/api/shutdown', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }} }})
+                .finally(() => {{
+                    try {{
+                        window.open('', '_self', '');
+                        window.close();
+                    }} catch (e) {{}}
+                    showShutdownOverlay();
+                }});
+        }}
+
+        function showShutdownOverlay() {{
+            const overlay = document.createElement('div');
+            overlay.id = 'shutdown-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.92);backdrop-filter:blur(10px);z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f8f8f2;font-family:sans-serif;text-align:center;padding:20px;box-sizing:border-box;';
+            overlay.innerHTML = `
+                <div style="font-size:44px;margin-bottom:12px;">🛑</div>
+                <h2 style="margin:0 0 8px 0;font-size:20px;color:#f8f8f2;font-weight:700;">Servidor GrafLean Encerrado</h2>
+                <p style="color:#75715e;font-size:13px;margin:0 0 18px 0;max-width:380px;line-height:1.5;">O processo Python foi finalizado com sucesso. Você já pode fechar esta aba.</p>
+                <button onclick="window.close()" class="sublime-btn" style="padding:6px 14px;background:#272822;color:#f8f8f2;border:1px solid #3e3d32;border-radius:6px;cursor:pointer;font-size:12px;">Fechar Aba</button>
+            `;
+            document.body.appendChild(overlay);
+        }}
+
         // 10. Sincronização em Tempo Real (Live Reload via SSE)
         function initLiveReload() {{
             if (location.protocol.startsWith('http')) {{
                 const badge = document.createElement('div');
                 badge.id = 'live-indicator';
-                badge.style.cssText = 'position:fixed;bottom:12px;right:12px;background:#a6e22e;color:#1e1e1e;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:bold;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,0.5);display:flex;align-items:center;gap:6px;font-family:sans-serif;pointer-events:none;';
-                badge.innerHTML = '<span style="width:8px;height:8px;background:#272822;border-radius:50%;display:inline-block;"></span> AO VIVO (Watch Mode)';
+                badge.style.cssText = 'position:fixed;bottom:10px;right:12px;background:rgba(14,14,14,0.75);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:2px 8px;font-size:10px;color:#75715e;font-family:sans-serif;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,0.5);z-index:9999;';
+                badge.innerHTML = `
+                    <button id="btn-toggle-live" onclick="toggleLiveWatch()" style="background:transparent;border:none;color:inherit;font-size:10px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:2px 4px;border-radius:4px;transition:color 0.2s;" title="Clique para pausar a sincronização em tempo real">
+                        <span id="live-status-dot" style="display:inline-block;width:5px;height:5px;background:#a6e22e;border-radius:50%;box-shadow:0 0 4px #a6e22e;"></span>
+                        <span id="live-status-text" style="color:#a6e22e;font-weight:600;">Ao Vivo</span>
+                    </button>
+                    <span style="color:rgba(255,255,255,0.12);font-size:9px;">|</span>
+                    <button id="btn-shutdown-server" onclick="shutdownServer()" style="background:transparent;border:none;color:#75715e;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;padding:2px 4px;border-radius:4px;transition:color 0.2s;" title="Encerrar servidor GrafLean (finaliza processo Python e fecha janela)" onmouseover="this.style.color='#f92672'" onmouseout="this.style.color='#75715e'">⏻</button>
+                `;
                 document.body.appendChild(badge);
 
                 const saved = sessionStorage.getItem('lens_session_state');
@@ -2757,22 +2818,31 @@ class ArchitectureVisualizer:
                     }} catch (e) {{}}
                 }}
 
-                const evtSource = new EventSource('/events');
-                evtSource.addEventListener('update', () => {{
-                    fetchLiveUpdate();
-                }});
-                evtSource.addEventListener('reload', () => {{
-                    fetchLiveUpdate();
-                }});
-
-                evtSource.onerror = () => {{
-                    badge.style.background = '#fd971f';
-                    badge.innerHTML = '⚠️ Reconectando...';
+                window.connectSSE = function() {{
+                    if (evtSource) return;
+                    evtSource = new EventSource('/events');
+                    evtSource.addEventListener('update', () => {{
+                        if (isLiveWatchActive) fetchLiveUpdate();
+                    }});
+                    evtSource.addEventListener('reload', () => {{
+                        if (isLiveWatchActive) fetchLiveUpdate();
+                    }});
+                    evtSource.onerror = () => {{
+                        if (!isLiveWatchActive) return;
+                        const dot = document.getElementById('live-status-dot');
+                        const text = document.getElementById('live-status-text');
+                        if (dot) {{ dot.style.background = '#fd971f'; dot.style.boxShadow = 'none'; }}
+                        if (text) {{ text.style.color = '#fd971f'; text.innerText = 'Reconectando...'; }}
+                    }};
+                    evtSource.onopen = () => {{
+                        if (!isLiveWatchActive) return;
+                        const dot = document.getElementById('live-status-dot');
+                        const text = document.getElementById('live-status-text');
+                        if (dot) {{ dot.style.background = '#a6e22e'; dot.style.boxShadow = '0 0 4px #a6e22e'; }}
+                        if (text) {{ text.style.color = '#a6e22e'; text.innerText = 'Ao Vivo'; }}
+                    }};
                 }};
-                evtSource.onopen = () => {{
-                    badge.style.background = '#a6e22e';
-                    badge.innerHTML = '<span style="width:8px;height:8px;background:#272822;border-radius:50%;display:inline-block;"></span> AO VIVO (Watch Mode)';
-                }};
+                connectSSE();
             }}
         }}
         initLiveReload();

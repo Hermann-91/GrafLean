@@ -304,6 +304,14 @@ class ArchitectureWatcher:
                 except Exception:
                     payload = {}
 
+                if self.path == "/api/shutdown":
+                    self._send_json(200, {"success": True, "message": "Servidor GrafLean encerrado."})
+                    def _terminate():
+                        time.sleep(0.2)
+                        os._exit(0)
+                    threading.Thread(target=_terminate, daemon=True).start()
+                    return
+
                 if self.path == "/api/create-folder":
                     folder_path = payload.get("path", "").strip()
                     if not folder_path:

@@ -157,6 +157,17 @@ class TestHubServer(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("graflean-hub-v1", content)
 
+    def test_10_api_shutdown(self):
+        """Valida que a rota /api/shutdown responde 200 com mensagem de sucesso."""
+        called = []
+        self.hub._on_shutdown_test_hook = lambda: called.append(True)
+        status, res = self._http_post_json("/api/shutdown", {})
+        self.assertEqual(status, 200)
+        self.assertTrue(res.get("success"))
+        import time
+        time.sleep(0.3)
+        self.assertTrue(len(called) > 0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -521,6 +521,18 @@ class HubRequestHandler(BaseHTTPRequestHandler):
 
         path = self.path.rstrip("/")
 
+        # API: Encerrar Servidor Python (Shutdown)
+        if path == "/api/shutdown":
+            self._send_json(200, {"success": True, "message": "Servidor GrafLean encerrado."})
+            def _terminate():
+                time.sleep(0.2)
+                if hasattr(self.server_hub, "_on_shutdown_test_hook"):
+                    self.server_hub._on_shutdown_test_hook()
+                else:
+                    os._exit(0)
+            threading.Thread(target=_terminate, daemon=True).start()
+            return
+
         # API: Adicionar novo projeto
         if path == "/api/projects/add":
             proj_path = payload.get("path")
@@ -922,6 +934,7 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                 <button class="btn btn-secondary" id="btn-install-pwa" style="display:none;" onclick="installPwa()">📲 Instalar App</button>
                 <button class="btn btn-secondary" onclick="location.reload()">🔄 Atualizar</button>
                 <button class="btn btn-primary" onclick="openModal()">➕ Novo Projeto</button>
+                <button class="btn btn-secondary" onclick="shutdownServer()" title="Encerrar servidor GrafLean (finaliza processo Python e fecha janela)" style="color:var(--accent-pink); border-color:rgba(249,38,114,0.3); padding:8px 12px;">⏻</button>
             </div>
         </header>
 
@@ -973,6 +986,25 @@ class HubRequestHandler(BaseHTTPRequestHandler):
             if (!deferredPrompt) return;
             deferredPrompt.prompt();
             deferredPrompt = null;
+        }}
+
+        function shutdownServer() {{
+            if (!confirm("Deseja realmente desligar o GrafLean Hub? O processo Python será finalizado e a janela será fechada.")) return;
+            fetch('/api/shutdown', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }} }})
+                .finally(() => {{
+                    try {{
+                        window.open('', '_self', '');
+                        window.close();
+                    }} catch (e) {{}}
+                    document.body.innerHTML = `
+                        <div style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:#f8f8f2; font-family:sans-serif; text-align:center;">
+                            <div style="font-size:48px; margin-bottom:16px;">🛑</div>
+                            <h2 style="margin:0 0 10px 0; font-size:22px;">GrafLean Hub Encerrado</h2>
+                            <p style="color:#75715e; font-size:14px; margin:0 0 20px 0;">O processo Python foi finalizado com sucesso. Você já pode fechar esta aba.</p>
+                            <button onclick="window.close()" class="btn btn-secondary">Fechar Aba</button>
+                        </div>
+                    `;
+                }});
         }}
 
         function showToast(msg) {{
