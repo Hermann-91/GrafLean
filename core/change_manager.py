@@ -54,6 +54,8 @@ class ChangeManager:
         self.root_dir = root_dir
         self.ai_states: Dict[str, AIState] = {}
         self.git_states: Dict[str, GitState] = {}
+        self.ai_history: List[Dict[str, Any]] = []
+        self.max_history: int = 50
         self._listeners: Set[Callable[[ChangeEvent], None]] = set()
 
     def subscribe(self, callback: Callable[[ChangeEvent], None]) -> None:
@@ -74,14 +76,48 @@ class ChangeManager:
                 pass
         return evt
 
-    def set_ai_state(self, path: str, state: AIState | str) -> ChangeEvent:
+    def set_ai_state(self, path: str, state: AIState | str, message: Optional[str] = None) -> ChangeEvent:
         """Define o estado da IA para um determinado arquivo ou símbolo."""
         state_enum = AIState(state) if isinstance(state, str) else state
         self.ai_states[path] = state_enum
+
+        # Registra no histórico de operações da IA (Timeline)
+        current_time = time.time()
+        time_str = time.strftime("%H:%M:%S", time.localtime(current_time))
+        file_name = path.split("/")[-1] if "/" in path else path
+        desc = message or f"{state_enum.value.capitalize()}: {file_name}"
+
+        history_entry = {
+            "id": f"ai_{int(current_time * 1000)}",
+            "timestamp": current_time,
+            "time_str": time_str,
+            "path": path,
+            "file_name": file_name,
+            "state": state_enum.value,
+            "message": desc
+        }
+        self.ai_history.insert(0, history_entry)
+        if len(self.ai_history) > self.max_history:
+            self.ai_history.pop()
+
+        total_ai_active = sum(1 for s in self.ai_states.values() if s not in (AIState.IDLE, AIState.FINISHED))
+
         return self.emit("ai_state", {
             "path": path,
-            "state": state_enum.value
+            "state": state_enum.value,
+            "message": desc,
+            "time_str": time_str,
+            "active_count": total_ai_active,
+            "history_count": len(self.ai_history)
         })
+
+    def get_ai_history(self) -> List[Dict[str, Any]]:
+        """Retorna cópia do histórico cronológico das operações recentes da IA."""
+        return list(self.ai_history)
+
+    def clear_ai_history(self) -> None:
+        """Limpa o histórico de operações da IA."""
+        self.ai_history.clear()
 
     def clear_ai_state(self, path: str) -> Optional[ChangeEvent]:
         """Limpa o estado da IA quando uma operação for concluída."""
@@ -189,5 +225,6 @@ class ChangeManager:
             },
             "new_files": untracked,
             "modified_files": modified,
-            "deleted_files": deleted
+            "deleted_files": deleted,
+            "ai_history": self.get_ai_history()[:20]
         }

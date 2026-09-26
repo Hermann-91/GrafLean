@@ -304,6 +304,12 @@ class ArchitectureWatcher:
                         "data": watcher.get_live_data()
                     })
 
+                elif self.path == "/api/ai-history":
+                    return self._send_json(200, {
+                        "success": True,
+                        "history": watcher.change_manager.get_ai_history()
+                    })
+
                 elif self.path in ("/", "/index.html", "/arch_map.html"):
                     if not os.path.exists(watcher.html_path):
                         self.send_error(404, "Mapa arquitetural não encontrado.")
@@ -414,13 +420,27 @@ class ArchitectureWatcher:
                 elif self.path == "/api/ai-state":
                     path = payload.get("path", "").strip()
                     state = payload.get("state", "idle").strip()
+                    msg = payload.get("message")
                     if not path:
                         return self._send_json(400, {"success": False, "error": "Parâmetro 'path' é obrigatório."})
-                    evt = watcher.change_manager.set_ai_state(path, state)
+                    evt = watcher.change_manager.set_ai_state(path, state, message=msg)
                     return self._send_json(200, {
                         "success": True,
                         "event": evt.data,
                         "summary": watcher.change_manager.get_summary()
+                    })
+
+                elif self.path == "/api/ai-history":
+                    return self._send_json(200, {
+                        "success": True,
+                        "history": watcher.change_manager.get_ai_history()
+                    })
+
+                elif self.path == "/api/ai-history/clear":
+                    watcher.change_manager.clear_ai_history()
+                    return self._send_json(200, {
+                        "success": True,
+                        "message": "Histórico da IA limpo com sucesso."
                     })
 
                 elif self.path == "/api/changes":

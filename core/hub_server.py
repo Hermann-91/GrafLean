@@ -519,6 +519,18 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(500, {"success": False, "error": str(e)})
             return
 
+        # Rota 8: API para obter histórico de operações da IA
+        if path == "/api/ai-history":
+            session = self._get_project_context()
+            if not session:
+                self._send_json(404, {"success": False, "error": "Sessão do projeto não identificada."})
+                return
+            self._send_json(200, {
+                "success": True,
+                "history": session.change_manager.get_ai_history()
+            })
+            return
+
         self._send_json(404, {"error": f"Rota não encontrada: {path}"})
 
     def do_POST(self):
@@ -647,14 +659,32 @@ class HubRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/ai-state":
             target_path = payload.get("path", "").strip()
             state = payload.get("state", "idle").strip()
+            msg = payload.get("message")
             if not target_path:
                 self._send_json(400, {"success": False, "error": "Parâmetro 'path' não fornecido."})
                 return
-            evt = session.change_manager.set_ai_state(target_path, state)
+            evt = session.change_manager.set_ai_state(target_path, state, message=msg)
             self._send_json(200, {
                 "success": True,
                 "event": evt.data,
                 "summary": session.change_manager.get_summary()
+            })
+            return
+
+        # Rota: Consultar histórico de ações da IA
+        if path == "/api/ai-history":
+            self._send_json(200, {
+                "success": True,
+                "history": session.change_manager.get_ai_history()
+            })
+            return
+
+        # Rota: Limpar histórico de ações da IA
+        if path == "/api/ai-history/clear":
+            session.change_manager.clear_ai_history()
+            self._send_json(200, {
+                "success": True,
+                "message": "Histórico da IA limpo com sucesso."
             })
             return
 
