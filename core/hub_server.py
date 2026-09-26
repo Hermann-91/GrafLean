@@ -380,7 +380,7 @@ class HubRequestHandler(BaseHTTPRequestHandler):
             # Injeta botão de retorno para a biblioteca no cabeçalho do Workspace
             btn_hub = (
                 '<a href="/" style="display:inline-flex; align-items:center; gap:5px; text-decoration:none; '
-                'color:#89b4fa; background:#181825; border:1px solid #313244; padding:3px 10px; border-radius:6px; '
+                'color:#66d9ef; background:#141414; border:1px solid #282828; padding:3px 10px; border-radius:6px; '
                 'font-size:12px; font-weight:600; margin-right:8px;" title="Voltar ao Hub da Biblioteca">◀ Biblioteca</a>'
             )
             content = content.replace('<div class="brand-title">', btn_hub + '<div class="brand-title">', 1)
@@ -621,7 +621,7 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                     '<span class="badge badge-zero" title="Zero poluição local — 100% no cache ~/.graflean/">🛡️ Zero-Footprint</span>'
                 )
                 cycle_badge = (
-                    '<span style="color:#f38ba8; font-weight:bold;">⚠️ Ciclos Detectados</span>'
+                    '<span style="color:#f92672; font-weight:bold;">⚠️ Ciclos Detectados</span>'
                     if p.has_cycles else
                     '<span style="color:#a6e22e; font-weight:bold;">✅ Acíclico</span>'
                 )
@@ -656,7 +656,7 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                     </div>
 
                     <div class="card-footer">
-                        <a href="/p/{p.id}" class="btn btn-primary">🚀 Abrir Workspace</a>
+                        <a href="/p/{p.id}" target="_blank" class="btn btn-primary" title="Abrir Workspace em nova aba do navegador">🚀 Abrir Workspace</a>
                         <div style="display:flex; gap:6px;">
                             <button class="btn btn-secondary" onclick="rescanProject('{p.id}')" title="Re-escanear">🔄</button>
                             <button class="btn btn-secondary" onclick="toggleAi('{p.id}', {str(not p.ai_accelerator).lower()})" title="Alternar Modo IA">⚡</button>
@@ -675,11 +675,11 @@ class HubRequestHandler(BaseHTTPRequestHandler):
     <link rel="manifest" href="/manifest.json">
     <style>
         :root {{
-            --bg-base: #0c0d0e;
-            --bg-surface: rgba(22, 23, 27, 0.7);
+            --bg-base: #000000;
+            --bg-surface: rgba(10, 10, 10, 0.85);
             --border: rgba(255, 255, 255, 0.08);
             --text-main: #f8f8f2;
-            --text-muted: #a6adc8;
+            --text-muted: #75715e;
             --accent-green: #a6e22e;
             --accent-cyan: #66d9ef;
             --accent-pink: #f92672;
@@ -736,11 +736,11 @@ class HubRequestHandler(BaseHTTPRequestHandler):
             box-shadow: 0 0 15px rgba(166, 226, 46, 0.4);
         }}
         .btn-secondary {{
-            background: #181825;
+            background: #141414;
             color: var(--text-main);
             border-color: var(--border);
         }}
-        .btn-secondary:hover {{ background: #25263a; border-color: rgba(255,255,255,0.2); }}
+        .btn-secondary:hover {{ background: #222222; border-color: rgba(255,255,255,0.2); }}
         .btn-danger {{
             background: rgba(249, 38, 114, 0.15);
             color: var(--accent-pink);

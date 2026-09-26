@@ -38,11 +38,10 @@ if [ "$SERVER_ALREADY_RUNNING" = false ]; then
     done
 fi
 
-# Abre a janela do Chrome no modo app
-# O uso de --user-data-dir dedicado permite que o Chrome bloqueie o script até a janela fechar
-# e evita que o app se misture com a sua sessão comum de navegação
+# Abre o Chrome em nova janela com suporte completo a abas nativas
+# Permite navegar na internet, acessar IAs externas e abrir múltiplos workspaces em abas
 google-chrome \
-    --app="$URL" \
+    --new-window "$URL" \
     --class="GrafLean" \
     --user-data-dir="$HOME/.config/graflean-app" \
     --no-first-run \
