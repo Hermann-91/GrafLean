@@ -125,7 +125,7 @@ class TestArchitectureVisualizer(unittest.TestCase):
             self.assertIn("quick-palette-backdrop", content)
             self.assertIn("quick-palette-input", content)
             self.assertIn("openQuickPalette", content)
-            self.assertIn("btn-quick-open", content)
+            self.assertNotIn("btn-quick-open", content)
             self.assertIn("CodeMirror", content)
             self.assertIn("sublime-table", content)
             self.assertIn("#000000", content)

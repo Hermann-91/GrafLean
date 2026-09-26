@@ -136,7 +136,6 @@ class TestPerformanceAndScale(unittest.TestCase):
 
         self.assertIn("btn-perspective-code", html)
         self.assertIn("btn-perspective-change", html)
-        self.assertIn("btn-perspective-impact", html)
         self.assertIn("change-summary-banner", html)
         self.assertIn("graph-limit-banner", html)
         self.assertIn("switchPerspective", html)

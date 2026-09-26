@@ -95,16 +95,45 @@ class TestAIExperienceAndRefinements(unittest.TestCase):
         vis = ArchitectureVisualizer(graph)
         html = vis.render_html()
 
-        # Componentes da Fase E
+        # Componentes da Interface Limpa (Clean UI)
         self.assertIn('id="ai-status-capsule"', html)
-        self.assertIn('id="ai-history-drawer"', html)
-        self.assertIn('id="ai-history-list"', html)
-        self.assertIn('id="btn-ai-history"', html)
-
-        # Componentes da Fase F
         self.assertIn('id="change-mini-map"', html)
-        self.assertIn('id="btn-toggle-clustering"', html)
         self.assertIn('id="telemetry-fps"', html)
+
+        # Garante que botões e painéis removidos não estão presentes
+        self.assertNotIn('id="ai-history-drawer"', html)
+        self.assertNotIn('id="btn-ai-history"', html)
+        self.assertNotIn('id="btn-toggle-clustering"', html)
+        self.assertNotIn('id="btn-perspective-impact"', html)
+
+    def test_git_status_live_sync_and_commit_cleanup(self):
+        """Garante que novo arquivo fica marcado e desmarca automaticamente após commit."""
+        import subprocess
+        # Inicializa repositório Git no diretório de teste
+        subprocess.run(["git", "init"], cwd=self.test_dir, capture_output=True, check=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=self.test_dir, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test User"], cwd=self.test_dir, capture_output=True)
+
+        # 1. Cria novo arquivo e sincroniza Git
+        new_file = os.path.join(self.test_dir, "feature.py")
+        with open(new_file, "w", encoding="utf-8") as f:
+            f.write("# Nova funcionalidade\n")
+
+        events = self.change_mgr.sync_git_status()
+        status_events = [e for e in events if e.event == "git_status"]
+        self.assertGreaterEqual(len(status_events), 1)
+        self.assertIn(self.change_mgr.git_states.get("feature.py") or self.change_mgr.git_states.get(new_file), ["untracked", "modified"])
+
+        # 2. Executa commit no Git
+        subprocess.run(["git", "add", "feature.py"], cwd=self.test_dir, capture_output=True, check=True)
+        subprocess.run(["git", "commit", "-m", "feat: adicionar feature.py"], cwd=self.test_dir, capture_output=True, check=True)
+
+        # 3. Sincroniza novamente: o repositório agora está limpo!
+        commit_events = self.change_mgr.sync_git_status()
+        committed_events = [e for e in commit_events if e.data.get("status") == "committed"]
+        self.assertGreaterEqual(len(committed_events), 1)
+        # Confirma que os estados dirty foram completamente limpos
+        self.assertEqual(len(self.change_mgr.git_states), 0)
 
 
 class TestAIEndpointsIntegration(unittest.TestCase):

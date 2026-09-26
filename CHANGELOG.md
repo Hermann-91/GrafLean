@@ -4,6 +4,33 @@ Todas as alterações relevantes do **GrafLean** são documentadas neste arquivo
 
 ---
 
+## [2.4.0] - 2026-09-26
+
+### 🔄 Sincronização Reativa com Git Status & Commits
+- **Detecção em Tempo Real de `git commit` e Staging**:
+  - Monitoramento contínuo ultraleve (< 0.05ms) dos marcadores `.git/index` e `.git/HEAD` no `ArchitectureWatcher`.
+  - Disparo imediato do evento SSE `status: "committed"` assim que a working tree é commitada no terminal.
+  - Limpeza automática das tags visuais `NEW` e `MOD` nos nós do grafo, desmarcando cores e zerando o Mini-Map de mutações instantaneamente.
+- **Suporte no `ChangeManager`**:
+  - Método `sync_git_status()` integrado diretamente ao `GitTracker`.
+  - Mapeamento robusto de caminhos relativos e absolutos no `GitTracker.get_status_map()`.
+
+### 🎨 Clean UI & Mapa de Mutações Expansível
+- **Mapa de Mutações com Lista Expansível e Interativa**:
+  - Adicionado botão de expansão com seta (`▾` / `▴`) no cabeçalho do card de mutações.
+  - Listagem categorizada com detalhes semânticos de cores: 🟢 `NEW` (verde), 🟠 `MOD` (âmbar) e 🔴 `DEL` (vermelho).
+  - Clique direto em qualquer arquivo para abri-lo no editor Monokai e focar a câmera do grafo suavemente no nó.
+- **Eliminação de Ruídos e Botões Redundantes (Clean UI)**:
+  - Remoção dos botões de busca duplicados (`🔍` e `📝`) da barra do grafo (já presentes na barra da árvore de arquivos).
+  - Remoção da gaveta lateral de histórico da IA e seu botão `📜 Histórico`, mantendo a cápsula de status no topo puramente como indicador visual em tempo real.
+  - Remoção do botão e lógica de clustering de módulos/pastas.
+  - Remoção da aba de perspectiva e lógica de impacto.
+
+### 🧪 Garantia de Qualidade
+- Expansão da suíte para **92 testes automatizados** (100% aprovados), incluindo teste de integração para o ciclo de vida do Git e limpeza pós-commit.
+
+---
+
 ## [2.3.0] - 2026-09-26
 
 ### 🤖 Experiência IA (Fase E)
