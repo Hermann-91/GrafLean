@@ -68,11 +68,16 @@ class GitTracker:
                 abs_path = os.path.abspath(os.path.join(self.root_dir, rel_path))
 
                 if "??" in code or "A" in code:
-                    status_map[abs_path] = GitStatusType.NEW
+                    st = GitStatusType.NEW
                 elif "M" in code:
-                    status_map[abs_path] = GitStatusType.MODIFIED
+                    st = GitStatusType.MODIFIED
                 elif "D" in code:
-                    status_map[abs_path] = GitStatusType.DELETED
+                    st = GitStatusType.DELETED
+                else:
+                    st = GitStatusType.MODIFIED
+
+                status_map[abs_path] = st
+                status_map[rel_path] = st
 
         except (subprocess.SubprocessError, OSError):
             pass

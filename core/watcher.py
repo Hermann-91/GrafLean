@@ -61,6 +61,7 @@ class ArchitectureWatcher:
         self.clients_lock = threading.Lock()
         self.running = False
         self.server: Optional[ThreadedHTTPServer] = None
+        self._last_git_mtime: float = 0.0
         self._watcher_thread: Optional[threading.Thread] = None
 
         self.change_manager = ChangeManager(self.target_dir)
@@ -100,6 +101,21 @@ class ArchitectureWatcher:
                     except OSError:
                         pass
         return snapshots
+
+    def _get_git_mtime(self) -> float:
+        """Verifica mtime de .git/index e .git/HEAD para detectar commits e staging."""
+        git_dir = os.path.join(self.target_dir, ".git")
+        if not os.path.isdir(git_dir):
+            return 0.0
+        mtimes = [0.0]
+        for marker in ("index", "HEAD", "refs/heads"):
+            p = os.path.join(git_dir, marker)
+            if os.path.exists(p):
+                try:
+                    mtimes.append(os.path.getmtime(p))
+                except OSError:
+                    pass
+        return max(mtimes)
 
     def has_changes(self, current: Dict[str, float]) -> bool:
         """Verifica se houve arquivos adicionados, modificados ou removidos."""
@@ -192,6 +208,8 @@ class ArchitectureWatcher:
         self.graph.save_to_file()
         self.visualizer.generate_html(self.html_path)
         self.file_snapshots = self.get_tracked_files()
+        self._last_git_mtime = self._get_git_mtime()
+        self.change_manager.sync_git_status()
         duration_ms = (time.perf_counter() - start) * 1000
         return duration_ms
 
@@ -218,6 +236,13 @@ class ArchitectureWatcher:
         """Loop de monitoramento que roda em thread secundária."""
         while self.running:
             time.sleep(self.poll_interval)
+            git_mtime = self._get_git_mtime()
+            if git_mtime != self._last_git_mtime:
+                self._last_git_mtime = git_mtime
+                events = self.change_manager.sync_git_status()
+                if events:
+                    self.notify_clients()
+
             current = self.get_tracked_files()
             if self.has_changes(current):
                 start = time.perf_counter()

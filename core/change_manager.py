@@ -170,6 +170,16 @@ class ChangeManager:
         self.git_states = new_states
         return events
 
+    def sync_git_status(self) -> List[ChangeEvent]:
+        """Inspeciona o repositório Git e emite eventos para alterações e commits."""
+        try:
+            from core.git_tracker import GitTracker
+            tracker = GitTracker(self.root_dir)
+            status_map = tracker.get_status_map()
+            return self.update_git_status(status_map)
+        except Exception:
+            return []
+
     def compute_filesystem_delta(
         self,
         old_snapshots: Dict[str, float],
