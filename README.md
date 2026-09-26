@@ -21,12 +21,19 @@ O **GrafLean** soluciona esse gargalo operando como uma **IDE de raio-X arquitet
 
 ### 1. 🖥️ Workspace Integrado de IDE (Estilo Sublime / JetBrains)
 * **Coluna de Navegação Lateral:**
-  * **[📁 Árvore]:** Visão hierárquica construída com o *Composite Pattern*, exibindo diretórios, arquivos, classes, métodos e contadores com busca dinâmica.
+  * **[📁 Árvore]:** Visão hierárquica com dotfiles liberados (`.env`, `.gitignore`, etc.), ícones temáticos e contadores de símbolos com busca dinâmica.
   * **[ℹ️ Inspetor]:** Diagnóstico arquitetural instantâneo com Métricas de Robert C. Martin ($C_a$, $C_e$, $I$), docstrings e listas diretas de chamadores (*Inbound*) e dependências (*Outbound*).
   * **Botão `◀` Recolher:** Oculte o painel lateral com um clique para foco total no código.
+* **Sistema de Múltiplas Abas Inteligentes (Sublime Tab Bar):**
+  * **Pré-visualização (*Preview Tabs* em itálico):** Clique simples na árvore abre o arquivo temporariamente sem poluir a barra de abas.
+  * **Fixação (*Pinned Tabs* retas):** Duplo clique no arquivo na árvore ou na própria aba fixa o arquivo permanentemente.
+  * **Navegação Rápida:** Rolagem com a roda do mouse, atalhos `Ctrl+Tab`, `Ctrl+Shift+Tab` e `Ctrl+W` para fechar.
 * **Coluna Central — Editor Monokai Sublime (True Black):**
   * Fundo em Preto Absoluto (`#000000`) para contraste máximo em telas OLED.
-  * Gutter com numeração de linhas, realce da linha ativa e coloração de sintaxe 1:1 com o Sublime Text.
+  * CodeMirror Monokai integrado com preservação de sintaxe em tempo de edição, quebra de linha (*word wrap*) e salvamento direto com `Ctrl+S`.
+* **Busca Universal e Navegação Ágil:**
+  * **`Ctrl+P` / `Cmd+P` (Quick Open):** Salto instantâneo para arquivos e símbolos AST com busca fuzzy em memória.
+  * **`Ctrl+Shift+F` / `Cmd+Shift+F` (Find in Files):** Busca global de texto em todo o repositório com snippets e destaque visual.
 * **Divisores Arrastáveis com o Mouse (`col-resize`):**
   * Divisor interno entre Árvore e Editor de Código.
   * Divisor externo entre o Workspace de Código e o Grafo.
@@ -62,6 +69,19 @@ O **GrafLean** soluciona esse gargalo operando como uma **IDE de raio-X arquitet
 * 🐍 **Python:** Módulos, Classes, Herança, Funções, Assinaturas e Imports via AST nativo.
 * ⚛️ **JavaScript & TypeScript:** Funções, Classes, Componentes React, Hooks customizados (`use...`) e Services do Angular.
 * 📄 **HTML & Blade (Laravel):** Diretivas `@extends`, `@include` e componentes `<x-... />`.
+
+---
+
+## ⌨️ Atalhos de Produtividade (Estilo Sublime Text)
+
+| Atalho | Ação |
+| :--- | :--- |
+| <kbd>Ctrl</kbd> + <kbd>P</kbd> | **Quick Open:** Busca rápida e salto instantâneo de arquivo ou símbolo |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd> | **Find in Files:** Busca global de conteúdo em todos os arquivos |
+| <kbd>Ctrl</kbd> + <kbd>S</kbd> | **Salvar Arquivo:** Salva instantaneamente o arquivo em edição no disco |
+| <kbd>Ctrl</kbd> + <kbd>W</kbd> | **Fechar Aba:** Fecha a aba ativa atual |
+| <kbd>Ctrl</kbd> + <kbd>Tab</kbd> | **Próxima Aba:** Alterna para a próxima aba aberta |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Tab</kbd> | **Aba Anterior:** Alterna para a aba anterior |
 
 ---
 
@@ -113,13 +133,13 @@ graf-lens-new md docs/specs/TASK_CHECKOUT.md --template task
 
 ## 🧪 Suíte de Testes Automatizados
 
-Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (63 testes automatizados executando em menos de 800 milissegundos):
+Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (**70 testes automatizados** executando em menos de 1 segundo com 100% de sucesso):
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
 ```text
-Ran 63 tests in 0.789s
+Ran 70 tests in 0.988s
 OK
 ```
 

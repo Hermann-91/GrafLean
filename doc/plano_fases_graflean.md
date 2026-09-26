@@ -24,17 +24,14 @@ Transformar o GrafLean em uma IDE/Hub de arquitetura com latência ultra-baixa (
 
 ```mermaid
 flowchart TD
-    F1[Fase 1: Tema Sublime OLED #000000] --> V1{Parar, Testar e Validar}
-    V1 -->|Aprovado| F2[Fase 2: Árvore com Ícones e Pastas Ocultas]
-    V2 -->|Aprovado| F3[Fase 3: Editor Semântico e Word Wrap]
-    V3 -->|Aprovado| F4[Fase 4: Sincronia Git e Rastreio de IA]
-    V4 -->|Aprovado| F5[Fase 5: Busca Rápida Ctrl+P]
-    V5 -->|Aprovado| F6[Fase 6: Abas do Navegador, Web, PWA e Performance]
-    F2 --> V2{Parar, Testar e Validar}
-    F3 --> V3{Parar, Testar e Validar}
-    F4 --> V4{Parar, Testar e Validar}
-    F5 --> V5{Parar, Testar e Validar}
-    F6 --> VF([Entrega Completa]):::done
+    F1[Fase 1: Tema Sublime OLED #000000] -->|Concluído| F2[Fase 2: Árvore com Ícones e Pastas Ocultas]
+    F2 -->|Concluído| F3[Fase 3: Editor Semântico e Word Wrap]
+    F3 -->|Concluído| F4[Fase 4: Sincronia Git e Rastreio de IA]
+    F4 -->|Concluído| F5[Fase 5: Múltiplas Abas de Arquivos e Busca Ctrl+P]
+    F5 -->|Concluído| F6[Fase 6: Busca Global Ctrl+Shift+F e Preservação de Abas]
+    F6 --> M1[Melhoria: Preview Tabs & Pinned Tabs]
+    M1 --> VF([Todas as Fases Concluídas e Aprovadas]):::done
+    classDef done fill:#a6e22e,stroke:#272822,stroke-width:2px,color:#1e1e1e,font-weight:bold;
 ```
 
 ---
@@ -150,7 +147,14 @@ flowchart TD
 - **🛑 Ponto de Parada, Teste e Validação:**
   1. Executar `./run_app.sh` e confirmar que o Chrome abre com a barra de abas ativa.
   2. Abrir uma nova aba do navegador com `Ctrl+T`, navegar em um site externo (ex.: documentação ou IA web) e verificar a convivência perfeita com o GrafLean.
-  3. Executar a suíte completa de testes: `python3 -m unittest discover tests` (garantindo 100% dos 63 testes passando).
+  3. Executar a suíte completa de testes: `python3 -m unittest discover tests` (garantindo 100% dos 70 testes passando).
+
+---
+
+### Status Final da Execução
+- **Fases 1 a 6:** Concluídas, testadas e commitadas atomicamente.
+- **Melhoria Ergonômica:** Implementação de Preview Tabs com clique único e Pinned Tabs por duplo clique ou edição.
+- **Qualidade:** 70 testes automatizados passando em menos de 1 segundo.
 
 ---
 
