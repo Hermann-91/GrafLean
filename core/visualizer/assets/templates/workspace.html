@@ -161,17 +161,12 @@
             <div class="graph-perspectives-nav" id="graph-perspectives" style="display:flex; gap:2px; background:#141414; border:1px solid #282828; border-radius:4px; padding:2px;">
                 <button class="perspective-tab active" id="btn-perspective-code" onclick="switchPerspective('code')" title="Code Graph: Arquitetura Estrutural do Software">CÓDIGO</button>
                 <button class="perspective-tab" id="btn-perspective-change" onclick="switchPerspective('change')" title="Change Graph: Modificações IA & Git">IA / GIT <span id="change-badge" class="change-badge" style="display:none; background:#a6e22e; color:#000; font-size:9px; font-weight:bold; border-radius:8px; padding:0 4px; margin-left:2px;">0</span></button>
-                <button class="perspective-tab" id="btn-perspective-impact" onclick="switchPerspective('impact')" title="Impact Graph: Área Afetada">IMPACTO</button>
             </div>
             <div style="display:flex; align-items:center; gap:4px;">
-                <div id="ai-status-capsule" class="ai-status-capsule" onclick="toggleAiHistoryDrawer()" style="display:none;" title="⚡ IA em Execução — Clique para abrir o Histórico (Ctrl+H)">
+                <div id="ai-status-capsule" class="ai-status-capsule" style="display:none;" title="⚡ IA em Execução no Workspace">
                     <span class="ai-pulse-dot"></span>
                     <span id="ai-capsule-text">IA: Ativa</span>
                 </div>
-                <button class="sublime-btn" id="btn-toggle-clustering" onclick="toggleClustering()" title="Agrupar nós por módulo/pasta (Clustering Semântico)" style="padding:3px 8px; font-size:11px;">📦 Módulos</button>
-                <button class="sublime-btn" id="btn-ai-history" onclick="toggleAiHistoryDrawer()" title="Histórico de Ações da IA (Ctrl+H)" style="padding:3px 8px; font-size:11px;">📜 Histórico</button>
-                <button class="sublime-btn" id="btn-quick-open" onclick="openQuickPalette()" title="Busca Rápida de Arquivos e Símbolos (Ctrl+P)" style="padding:3px 8px;">🔍</button>
-                <button class="sublime-btn" id="btn-find-in-files" onclick="openFindInFiles()" title="Localizar Texto nos Arquivos (Ctrl+Shift+F)" style="padding:3px 8px;">📝</button>
                 <button class="sublime-btn" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Ocultar/Expandir Grafo (Tela Cheia de Código)" style="color:#66d9ef; font-weight:bold; padding:3px 8px;">🌐</button>
             </div>
         </div>
@@ -195,7 +190,10 @@
                 <span style="font-weight:700; color:#66d9ef; display:flex; align-items:center; gap:5px; font-size:10.5px;">
                     <span>🗺️</span> MAPA DE MUTAÇÕES
                 </span>
-                <span id="mini-map-summary-text" style="color:#75715e; font-size:10px;">0 alterações</span>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span id="mini-map-summary-text" style="color:#75715e; font-size:10px;">0 alterações</span>
+                    <button id="btn-toggle-mini-map" class="mini-map-toggle-btn" onclick="toggleMiniMapExpansion()" title="Expandir/Recolher Lista de Arquivos">▾</button>
+                </div>
             </div>
             <div class="mini-map-bar-track" title="Distribuição proporcional das mutações">
                 <div id="bar-new" class="mini-bar-segment segment-new" style="width:0%;"></div>
@@ -207,6 +205,7 @@
                 <span style="color:#fd971f;">● Modificados</span>
                 <span style="color:#f92672;">● Excluídos</span>
             </div>
+            <div id="mini-map-files-container" class="mini-map-files-container" style="display:none;"></div>
         </div>
 
         <!-- Banner de Limite de Renderização Inteligente -->
@@ -263,26 +262,5 @@
 
     <!-- Menu Flutuante Contextual para Pastas e Arquivos -->
     <div id="tree-context-menu" class="tree-context-menu" style="display:none;"></div>
-
-    <!-- Gaveta Retrátil de Histórico de Operações da IA (Fase E.3) -->
-    <div id="ai-history-drawer" class="ai-history-drawer" style="display:none;">
-        <div class="ai-history-header">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span style="color:#66d9ef; font-size:15px;">🤖</span>
-                <b style="font-size:12px; color:#f8f8f2;">Histórico de Operações da IA</b>
-                <span id="ai-history-count-badge" class="ai-history-badge">0</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-                <button class="sublime-btn" onclick="clearAiHistory()" style="font-size:10px; padding:2px 7px;" title="Limpar Histórico de Ações">🗑️ Limpar</button>
-                <button class="sublime-btn" onclick="toggleAiHistoryDrawer()" style="font-size:10px; padding:2px 7px;" title="Fechar Painel (Esc)">✕</button>
-            </div>
-        </div>
-        <div id="ai-history-list" class="ai-history-list">
-            <div style="padding:24px 16px; text-align:center; color:#75715e; font-size:11.5px;">
-                Nenhuma operação registrada pela IA nesta sessão.<br>
-                <span style="font-size:10.5px; opacity:0.8;">Eventos aparecerão em tempo real conforme a IA criar ou editar arquivos.</span>
-            </div>
-        </div>
-    </div>
 </body>
 </html>

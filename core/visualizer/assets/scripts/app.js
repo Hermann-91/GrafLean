@@ -254,11 +254,10 @@
         let physicsRunning = false;
         let currentFocusId = null;
         let currentGraphDepth = 1;
-        let currentPerspective = 'code'; // 'code' | 'change' | 'impact'
+        let currentPerspective = 'code'; // 'code' | 'change'
         const GRAPH_NODE_LIMIT = 250;
         let graphLimitExpanded = false;
         let aiTaskStates = {};
-        let currentImpactFocalId = null;
         let changeFocusIndex = 0;
 
         function setGraphDepth(depth) {
@@ -318,22 +317,6 @@
                     borderColor = "#282828";
                     bgColor = "#0d0d0d";
                     fontColor = "#75715e";
-                }
-            } else if (currentPerspective === 'impact') {
-                if (isFocal) {
-                    borderColor = "#a6e22e";
-                    borderWidth = 4.5;
-                    nodeSize = 24;
-                    fontColor = "#a6e22e";
-                } else if (distance === 1) {
-                    borderColor = "#66d9ef";
-                    borderWidth = 3;
-                    nodeSize = 16;
-                    fontColor = "#66d9ef";
-                } else {
-                    borderColor = "#fd971f";
-                    borderWidth = 2;
-                    nodeSize = 12;
                 }
             } else {
                 // Code Graph
@@ -517,18 +500,6 @@
                         }
                     });
                 }
-            } else if (currentPerspective === 'impact') {
-                // Impact Graph: foco exclusivo na cascata de impacto do elemento focal
-                const focal = currentImpactFocalId || currentFocusId;
-                const sub = getNeighborhood(focal, 2);
-                sub.nodeIds.forEach(nid => {
-                    const raw = allNodesMap.get(nid);
-                    if (raw) {
-                        const isFocal = (nid === sub.focalId);
-                        const dist = isFocal ? 0 : (sub.level1.has(nid) ? 1 : 2);
-                        res.push(formatVisNode(raw, isFocal, dist));
-                    }
-                });
             } else {
                 // Code Graph
                 const sub = getNeighborhood(currentFocusId, currentGraphDepth);
@@ -557,7 +528,7 @@
         }
 
         function getFilteredEdges() {
-            if (currentPerspective === 'change' || currentPerspective === 'impact') {
+            if (currentPerspective === 'change') {
                 const currentVisibleIds = new Set(getFilteredNodes().map(n => n.id));
                 const resEdges = [];
                 rawEdges.forEach(e => {
@@ -617,10 +588,6 @@
             network.on('click', (params) => {
                 if (params.nodes && params.nodes.length > 0) {
                     const clickedId = params.nodes[0];
-                    if (currentPerspective === 'impact') {
-                        currentImpactFocalId = clickedId;
-                        refreshGraphData();
-                    }
                     Mediator.inspectOnly(clickedId);
                 }
             });
@@ -645,9 +612,6 @@
             updateNodesCount();
             network.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
         }
-
-        let aiHistoryList = [];
-        let isClusteringActive = false;
 
         window.switchPerspective = function(mode) {
             currentPerspective = mode;
@@ -736,12 +700,33 @@
             updateChangeMiniMap();
         }
 
+        let isMiniMapExpanded = false;
+        window.toggleMiniMapExpansion = function() {
+            isMiniMapExpanded = !isMiniMapExpanded;
+            const container = document.getElementById('mini-map-files-container');
+            const btn = document.getElementById('btn-toggle-mini-map');
+            if (container) container.style.display = isMiniMapExpanded ? 'flex' : 'none';
+            if (btn) btn.classList.toggle('open', isMiniMapExpanded);
+        };
+
         function updateChangeMiniMap() {
             let nNew = 0, nMod = 0, nDel = 0;
+            const changedFiles = [];
             allNodesMap.forEach(n => {
-                if (n.git === 'new' || aiTaskStates[n.file] === 'creating') nNew++;
-                else if (n.git === 'modified' || aiTaskStates[n.file] === 'editing') nMod++;
-                else if (n.git === 'deleted') nDel++;
+                let status = null;
+                if (n.git === 'new' || aiTaskStates[n.file] === 'creating') {
+                    nNew++;
+                    status = 'new';
+                } else if (n.git === 'modified' || aiTaskStates[n.file] === 'editing') {
+                    nMod++;
+                    status = 'mod';
+                } else if (n.git === 'deleted') {
+                    nDel++;
+                    status = 'del';
+                }
+                if (status && n.file) {
+                    changedFiles.push({ node: n, status: status });
+                }
             });
             const total = nNew + nMod + nDel;
             const summaryText = document.getElementById('mini-map-summary-text');
@@ -760,129 +745,30 @@
                 if (barMod) barMod.style.width = `${(nMod / total) * 100}%`;
                 if (barDel) barDel.style.width = `${(nDel / total) * 100}%`;
             }
+
+            // Renderiza lista interativa de arquivos com cores semânticas
+            const filesContainer = document.getElementById('mini-map-files-container');
+            if (filesContainer) {
+                if (changedFiles.length === 0) {
+                    filesContainer.innerHTML = '<div style="color:#75715e; font-size:10px; padding:4px; text-align:center;">Nenhum arquivo modificado</div>';
+                } else {
+                    filesContainer.innerHTML = changedFiles.map(item => {
+                        const fileName = item.node.file.split('/').pop();
+                        const color = item.status === 'new' ? '#a6e22e' : (item.status === 'mod' ? '#fd971f' : '#f92672');
+                        const tagText = item.status === 'new' ? 'NEW' : (item.status === 'mod' ? 'MOD' : 'DEL');
+                        const graphId = resolveToGraphNodeId(item.node.id);
+                        return `
+                            <div class="mini-map-file-row" onclick="Mediator.loadCode('${item.node.file}', 1); if (network && '${graphId}') { network.focus('${graphId}', { scale: 1.25, animation: { duration: 350 } }); Mediator.inspectOnly('${graphId}'); }" title="${item.node.file} (Clique para abrir e focar)">
+                                <span class="mini-map-file-name">📄 ${fileName}</span>
+                                <span style="color:${color}; font-weight:bold; font-size:9.5px; border:1px solid ${color}44; padding:1px 4px; border-radius:3px;">${tagText}</span>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
         }
 
         // 13. Gaveta Retrátil de Histórico de Operações da IA (Fase E.3)
-        window.toggleAiHistoryDrawer = function(forceState) {
-            const drawer = document.getElementById('ai-history-drawer');
-            if (!drawer) return;
-            const isVisible = drawer.style.display !== 'none';
-            const willShow = typeof forceState === 'boolean' ? forceState : !isVisible;
-            drawer.style.display = willShow ? 'flex' : 'none';
-            if (willShow) {
-                renderAiHistory();
-            }
-        };
-
-        window.renderAiHistory = function() {
-            const listEl = document.getElementById('ai-history-list');
-            const badgeEl = document.getElementById('ai-history-count-badge');
-            if (!listEl) return;
-            if (badgeEl) badgeEl.innerText = aiHistoryList.length;
-
-            if (aiHistoryList.length === 0) {
-                listEl.innerHTML = '<div style="padding:20px; text-align:center; color:#75715e; font-size:11px;">Nenhuma operação registrada pela IA nesta sessão.</div>';
-                return;
-            }
-
-            const stateIcons = {
-                'creating': '🟢',
-                'editing': '🟠',
-                'deleted': '🔴',
-                'analyzing': '⚡',
-                'finished': '✅',
-                'error': '❌',
-                'idle': '⚪'
-            };
-
-            listEl.innerHTML = aiHistoryList.map(item => {
-                const icon = stateIcons[item.state] || '🤖';
-                const fileName = item.file_name || (item.path ? item.path.split('/').pop() : 'arquivo');
-                return `
-                    <div class="ai-history-item" onclick="openFileFromHistory('${item.path}')" title="Clique para abrir ${fileName} no editor">
-                        <span class="ai-history-icon">${icon}</span>
-                        <div class="ai-history-body">
-                            <div class="ai-history-file">${fileName}</div>
-                            <div class="ai-history-msg">${escapeHtml(item.message || item.state)}</div>
-                        </div>
-                        <span class="ai-history-time">${item.time_str || ''}</span>
-                    </div>
-                `;
-            }).join('');
-        };
-
-        window.openFileFromHistory = function(filePath) {
-            if (!filePath) return;
-            Mediator.loadCode(filePath, 1);
-            const nodeId = resolveToGraphNodeId(`file://${filePath}`) || resolveToGraphNodeId(filePath);
-            if (nodeId && network) {
-                network.focus(nodeId, { scale: 1.2, animation: { duration: 350, easingFunction: 'easeInOutQuad' } });
-                Mediator.inspectOnly(nodeId);
-            }
-        };
-
-        window.clearAiHistory = async function() {
-            aiHistoryList = [];
-            renderAiHistory();
-            try {
-                await fetch('/api/ai-history/clear', { method: 'POST' });
-            } catch (e) {}
-            showToast('Histórico da IA limpo.');
-        };
-
-        // 14. Clustering Semântico por Pasta/Módulo (Fase F.2)
-        window.toggleClustering = function() {
-            if (!network) return;
-            isClusteringActive = !isClusteringActive;
-            const btn = document.getElementById('btn-toggle-clustering');
-
-            if (isClusteringActive) {
-                if (btn) {
-                    btn.style.background = '#66d9ef';
-                    btn.style.color = '#000000';
-                    btn.style.fontWeight = 'bold';
-                }
-                // Identifica diretórios de topo
-                const dirClusters = new Map();
-                allNodesMap.forEach(n => {
-                    if (n.file) {
-                        const parts = n.file.split('/');
-                        const topDir = parts.length > 1 ? parts[0] : 'root';
-                        if (!dirClusters.has(topDir)) dirClusters.set(topDir, []);
-                        dirClusters.get(topDir).push(n.id);
-                    }
-                });
-
-                dirClusters.forEach((nodeIds, dirName) => {
-                    if (nodeIds.length > 2) {
-                        const clusterOptions = {
-                            joinCondition: function(childOptions) {
-                                return nodeIds.includes(childOptions.id);
-                            },
-                            processProperties: function(clusterOptions, childNodes) {
-                                clusterOptions.label = `📦 ${dirName} (${childNodes.length})`;
-                                clusterOptions.shape = 'box';
-                                clusterOptions.color = { background: '#181818', border: '#66d9ef' };
-                                clusterOptions.font = { color: '#66d9ef', bold: true, size: 12 };
-                                clusterOptions.borderWidth = 2;
-                                return clusterOptions;
-                            }
-                        };
-                        network.cluster(clusterOptions);
-                    }
-                });
-                showToast("Módulos agrupados em clusters por pasta. Duplo clique para abrir.", "info");
-            } else {
-                if (btn) {
-                    btn.style.background = '';
-                    btn.style.color = '';
-                    btn.style.fontWeight = '';
-                }
-                refreshGraphData();
-                showToast("Clusters desagrupados.", "info");
-            }
-        };
-
         function updateNodesCount() {
             const badge = document.getElementById('graph-nodes-count');
             if (badge) badge.innerText = `${nodes.length} nós ativos`;
@@ -1982,19 +1868,6 @@
                                 }
                             }, 50);
                         }
-                        // Registra no histórico da IA
-                        aiHistoryList.unshift({
-                            id: `local_new_${Date.now()}`,
-                            timestamp: Date.now() / 1000,
-                            time_str: new Date().toLocaleTimeString(),
-                            path: payload.path,
-                            file_name: fileName,
-                            state: 'creating',
-                            message: `Arquivo criado: ${fileName}`
-                        });
-                        if (aiHistoryList.length > 50) aiHistoryList.pop();
-                        renderAiHistory();
-
                         updateChangeSummaryStats();
                         showToast(`Novo arquivo detectado: ${rawNode.label}`, "info");
                     } else if (eventType === 'node_changed') {
@@ -2037,17 +1910,6 @@
                         } else {
                             updateChangeSummaryStats();
                         }
-                        aiHistoryList.unshift({
-                            id: `local_del_${Date.now()}`,
-                            timestamp: Date.now() / 1000,
-                            time_str: new Date().toLocaleTimeString(),
-                            path: payload.path,
-                            file_name: fileName,
-                            state: 'deleted',
-                            message: `Arquivo excluído: ${fileName}`
-                        });
-                        if (aiHistoryList.length > 50) aiHistoryList.pop();
-                        renderAiHistory();
 
                         showToast(`Arquivo excluído: ${fileName}`, "info");
                     } else if (eventType === 'edge_added') {
@@ -2099,19 +1961,6 @@
                             }
                         }
 
-                        // Registra no histórico de operações da IA
-                        aiHistoryList.unshift({
-                            id: `ai_${Date.now()}`,
-                            timestamp: Date.now() / 1000,
-                            time_str: payload.time_str || new Date().toLocaleTimeString(),
-                            path: payload.path,
-                            file_name: fileName,
-                            state: payload.state,
-                            message: payload.message || `${payload.state.toUpperCase()}: ${fileName}`
-                        });
-                        if (aiHistoryList.length > 50) aiHistoryList.pop();
-                        renderAiHistory();
-
                         const nodeId = `file://${payload.path}`;
                         const raw = allNodesMap.get(nodeId);
                         if (raw && nodes && nodes.get(nodeId)) {
@@ -2119,22 +1968,16 @@
                         }
                         updateChangeSummaryStats();
                     } else if (eventType === 'git_status') {
-                        const nodeId = `file://${payload.path}`;
-                        const raw = allNodesMap.get(nodeId);
+                        const raw = allNodesMap.get(`file://${payload.path}`) || allNodesMap.get(payload.path);
                         if (raw) {
                             if (payload.status === 'committed') {
-                                // Transição suave de commit: esmaece para neutro sem salto
                                 raw.git = '';
-                                if (nodes && nodes.get(nodeId)) {
-                                    nodes.update({
-                                        id: nodeId,
-                                        color: { background: "#141414", border: "#66d9ef" },
-                                        borderWidth: 2
-                                    });
+                                if (nodes && nodes.get(raw.id)) {
+                                    nodes.update(formatVisNode(raw));
                                 }
                             } else {
                                 raw.git = payload.status;
-                                if (nodes && nodes.get(nodeId)) {
+                                if (nodes && nodes.get(raw.id)) {
                                     nodes.update(formatVisNode(raw));
                                 }
                             }
@@ -2183,17 +2026,6 @@
                     };
                 };
                 connectSSE();
-
-                // Carrega histórico prévio da IA
-                fetch('/api/ai-history')
-                    .then(r => r.json())
-                    .then(json => {
-                        if (json.success && Array.isArray(json.history)) {
-                            aiHistoryList = json.history;
-                            renderAiHistory();
-                        }
-                    })
-                    .catch(() => {});
 
                 // Telemetria leve de FPS (Fase F.5)
                 let frameCount = 0;
@@ -2649,13 +2481,9 @@
             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
                 e.preventDefault();
                 openQuickPalette();
-            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') {
-                e.preventDefault();
-                toggleAiHistoryDrawer();
             } else if (e.key === 'Escape') {
                 closeQuickPalette();
                 closeFindInFiles();
-                toggleAiHistoryDrawer(false);
             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
                 if (currentLoadedFilePath) {
                     e.preventDefault();
@@ -2675,8 +2503,6 @@
                     switchPerspective('code');
                 } else if (e.key === '2') {
                     switchPerspective('change');
-                } else if (e.key === '3') {
-                    switchPerspective('impact');
                 }
             }
         });
