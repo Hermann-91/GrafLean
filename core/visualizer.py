@@ -654,30 +654,72 @@ class ArchitectureVisualizer:
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #0a0a0a;
-            padding: 6px 12px;
+            background: #000000;
+            padding: 0 8px;
             border-bottom: 1px solid #1a1a1a;
             font-size: 12px;
+            overflow-x: auto;
+            gap: 8px;
         }}
-        .sublime-file-tab {{
+        .sublime-tabs-track {{
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            overflow-x: auto;
+            flex: 1;
+            scrollbar-width: none;
+        }}
+        .sublime-tabs-track::-webkit-scrollbar {{ display: none; }}
+        .sublime-tab-item {{
             display: flex;
             align-items: center;
-            gap: 8px;
-            background: #000000;
-            padding: 5px 12px;
-            border-radius: 4px 4px 0 0;
-            color: #f8f8f2;
-            font-weight: 600;
+            gap: 6px;
+            background: #0a0a0a;
+            padding: 6px 12px;
+            border-radius: 5px 5px 0 0;
+            color: #75715e;
+            font-weight: 500;
+            font-size: 11.5px;
             border: 1px solid #1a1a1a;
             border-bottom: none;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease;
             white-space: nowrap;
-            max-width: 320px;
+            max-width: 220px;
+        }}
+        .sublime-tab-item:hover {{
+            color: #f8f8f2;
+            background: #121212;
+        }}
+        .sublime-tab-item.active {{
+            background: #000000;
+            color: #f8f8f2;
+            border-top: 2px solid #66d9ef;
+            border-color: #282828 #282828 #000000 #282828;
+            font-weight: 600;
+            margin-bottom: -1px;
+            z-index: 2;
+        }}
+        .sublime-tab-close {{
+            font-size: 11px;
+            opacity: 0.5;
+            padding: 1px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.12s ease;
+            margin-left: 2px;
+        }}
+        .sublime-tab-close:hover {{
+            opacity: 1;
+            color: #f92672;
+            background: rgba(249, 38, 114, 0.2);
         }}
         .sublime-toolbar-actions {{
             display: flex;
             gap: 6px;
+            padding: 4px 0;
+            margin-left: auto;
         }}
         .sublime-btn {{
             padding: 4px 8px;
@@ -1031,11 +1073,8 @@ class ArchitectureVisualizer:
             <div id="editor-subpanel">
                 <div class="sublime-editor-window">
                     <div class="sublime-tab-header">
-                        <div class="sublime-file-tab">
-                            <span>📄</span>
-                            <span id="sublime-tab-filename">Nenhum arquivo</span>
-                            <span onclick="toggleCodeSubpanel()" title="Recolher Editor de Código" style="cursor:pointer; opacity:0.6; margin-left:6px; font-size:11px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">✕</span>
-                        </div>
+                        <!-- Trilho de Múltiplas Abas de Arquivos (Sublime OLED) -->
+                        <div class="sublime-tabs-track" id="sublime-tabs-track"></div>
                         <div class="sublime-toolbar-actions">
                             <button class="sublime-btn" id="btn-toggle-edit" onclick="toggleEditMode()" title="Alternar entre Leitura e Edição">✏️ Editar</button>
                             <button class="sublime-btn" id="btn-save-code" onclick="saveCurrentCode()" style="display:none; background:#a6e22e; color:#000000; font-weight:700; border-color:#a6e22e;" title="Salvar Alterações no Disco (Ctrl+S)">💾 Salvar</button>
@@ -1106,6 +1145,103 @@ class ArchitectureVisualizer:
         let isEditMode = false;
         let currentLoadedFilePath = null;
         let openFolders = new Set(JSON.parse(localStorage.getItem('graf_lens_open_folders') || '[""]'));
+        let openEditorTabs = [];
+        try {{
+            openEditorTabs = JSON.parse(localStorage.getItem('graf_open_tabs') || '[]');
+        }} catch (e) {{
+            openEditorTabs = [];
+        }}
+
+        function saveOpenTabsToStorage() {{
+            try {{
+                localStorage.setItem('graf_open_tabs', JSON.stringify(openEditorTabs));
+            }} catch (e) {{}}
+        }}
+
+        function renderEditorTabs() {{
+            const track = document.getElementById('sublime-tabs-track');
+            if (!track) return;
+
+            if (openEditorTabs.length === 0) {{
+                track.innerHTML = '<div style="color:#75715e; font-size:11px; padding:6px 8px; font-style:italic;">Nenhum arquivo aberto</div>';
+                return;
+            }}
+
+            track.innerHTML = openEditorTabs.map(filePath => {{
+                const fileName = filePath.split('/').pop();
+                const iconInfo = typeof getFileIcon === 'function' ? getFileIcon(fileName) : {{ icon: '📄' }};
+                const isActive = filePath === currentLoadedFilePath;
+                return `
+                    <div class="sublime-tab-item ${{isActive ? 'active' : ''}}" 
+                         onclick="switchEditorTab('${{filePath}}')" 
+                         title="${{filePath}}">
+                        <span>${{iconInfo.icon}}</span>
+                        <span class="sublime-tab-name">${{fileName}}</span>
+                        <span class="sublime-tab-close" onclick="closeEditorTab('${{filePath}}', event)" title="Fechar Aba (Ctrl+W)">✕</span>
+                    </div>
+                `;
+            }}).join('');
+
+            const activeEl = track.querySelector('.sublime-tab-item.active');
+            if (activeEl) {{
+                activeEl.scrollIntoView({{ behavior: 'smooth', block: 'nearest', inline: 'nearest' }});
+            }}
+        }}
+
+        function openEditorTab(filePath, targetLine) {{
+            if (!filePath) return;
+            if (!openEditorTabs.includes(filePath)) {{
+                openEditorTabs.push(filePath);
+                saveOpenTabsToStorage();
+            }}
+            renderEditorTabs();
+        }}
+
+        function switchEditorTab(filePath) {{
+            if (filePath === currentLoadedFilePath) return;
+            Mediator.loadCode(filePath);
+        }}
+
+        function closeEditorTab(filePath, event) {{
+            if (event) event.stopPropagation();
+            const index = openEditorTabs.indexOf(filePath);
+            if (index === -1) return;
+
+            openEditorTabs.splice(index, 1);
+            saveOpenTabsToStorage();
+
+            if (filePath === currentLoadedFilePath) {{
+                if (openEditorTabs.length > 0) {{
+                    const nextIndex = Math.min(index, openEditorTabs.length - 1);
+                    Mediator.loadCode(openEditorTabs[nextIndex]);
+                }} else {{
+                    currentLoadedFilePath = null;
+                    const container = document.getElementById('sublime-table-container');
+                    const textarea = document.getElementById('sublime-editor-textarea');
+                    if (container) {{
+                        container.innerHTML = '<div style="padding: 24px; color: #75715e; font-family: monospace;">// Nenhuma aba aberta. Selecione um arquivo na árvore ou use Ctrl+P para abrir.</div>';
+                    }}
+                    if (textarea) textarea.value = '';
+                    if (cmEditorInstance) cmEditorInstance.getWrapperElement().style.display = 'none';
+                    const statusPos = document.getElementById('sublime-status-pos');
+                    const statusLang = document.getElementById('sublime-status-lang');
+                    if (statusPos) statusPos.innerText = 'Line 0, Column 0';
+                    if (statusLang) statusLang.innerText = 'Nenhum arquivo';
+                }}
+            }}
+            renderEditorTabs();
+        }}
+
+        function cycleNextTab(direction = 1) {{
+            if (openEditorTabs.length <= 1) return;
+            const currentIndex = openEditorTabs.indexOf(currentLoadedFilePath);
+            let nextIndex = (currentIndex + direction + openEditorTabs.length) % openEditorTabs.length;
+            Mediator.loadCode(openEditorTabs[nextIndex]);
+        }}
+
+        function openFile(filePath) {{
+            Mediator.loadCode(filePath);
+        }}
 
         function showToast(message, type = 'info') {{
             let toast = document.getElementById('graf-toast');
@@ -1640,19 +1776,18 @@ class ArchitectureVisualizer:
                 currentLoadedFilePath = filePath;
                 const container = document.getElementById('sublime-table-container');
                 const textarea = document.getElementById('sublime-editor-textarea');
-                const tabFilename = document.getElementById('sublime-tab-filename');
                 const statusPos = document.getElementById('sublime-status-pos');
                 const statusLang = document.getElementById('sublime-status-lang');
 
                 if (!filePath) {{
                     container.innerHTML = '<div style="padding: 20px; color: #75715e;">// Nenhum arquivo selecionado.</div>';
-                    tabFilename.innerText = 'Sem arquivo';
                     if (textarea) textarea.value = '';
+                    renderEditorTabs();
                     return;
                 }}
 
+                openEditorTab(filePath, targetLine);
                 const fileName = filePath.split('/').pop();
-                tabFilename.innerText = fileName;
 
                 // Lazy Loading: busca do cache local ou via API sob demanda
                 let source = rawFileSources[filePath];
@@ -1955,12 +2090,18 @@ class ArchitectureVisualizer:
         const treeRoot = document.getElementById('tree-root');
         renderTree(rawTree, treeRoot);
 
-        // Auto-carrega o primeiro arquivo para o editor já abrir com código pronto
+        // Auto-carrega as abas da sessão anterior ou o primeiro arquivo
         function autoLoadInitialFile() {{
-            const firstFile = rawNodes.find(n => n.type === 'file' && n.file);
-            if (firstFile) {{
-                Mediator.loadCode(firstFile.file, 1);
-                Mediator.highlightInTree(firstFile.id);
+            if (openEditorTabs.length > 0) {{
+                const lastTab = openEditorTabs[openEditorTabs.length - 1];
+                renderEditorTabs();
+                Mediator.loadCode(lastTab, 1);
+            }} else {{
+                const firstFile = rawNodes.find(n => n.type === 'file' && n.file);
+                if (firstFile) {{
+                    Mediator.loadCode(firstFile.file, 1);
+                    Mediator.highlightInTree(firstFile.id);
+                }}
             }}
         }}
         autoLoadInitialFile();
@@ -2687,6 +2828,14 @@ class ArchitectureVisualizer:
                 openQuickPalette();
             }} else if (e.key === 'Escape') {{
                 closeQuickPalette();
+            }} else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {{
+                if (currentLoadedFilePath) {{
+                    e.preventDefault();
+                    closeEditorTab(currentLoadedFilePath);
+                }}
+            }} else if (e.ctrlKey && e.key === 'Tab') {{
+                e.preventDefault();
+                cycleNextTab(e.shiftKey ? -1 : 1);
             }}
         }});
     </script>

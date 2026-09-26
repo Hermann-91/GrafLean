@@ -121,6 +121,31 @@ class TestArchitectureVisualizer(unittest.TestCase):
             self.assertIn("sublime-table", content)
             self.assertIn("#000000", content)
 
+    def test_generates_html_with_multiple_editor_tabs_and_keybindings(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            graph = ProjectGraph(tmp_dir)
+            node_file = Node(id="file://User.php", name="User.php", symbol_type=SymbolType.FILE, file_path="User.php", line=1)
+            graph.nodes = {"file://User.php": node_file}
+            graph.edges = []
+            graph.analyzer = ArchitectureAnalyzer([node_file], [])
+            graph.analyzer.analyze_all()
+
+            viz = ArchitectureVisualizer(graph)
+            out_file = os.path.join(tmp_dir, "map.html")
+            path = viz.generate_html(out_file)
+
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("sublime-tabs-track", content)
+            self.assertIn("sublime-tab-item", content)
+            self.assertIn("openEditorTab", content)
+            self.assertIn("closeEditorTab", content)
+            self.assertIn("switchEditorTab", content)
+            self.assertIn("cycleNextTab", content)
+            self.assertIn("renderEditorTabs", content)
+            self.assertIn("openEditorTabs", content)
+
 
 if __name__ == "__main__":
     unittest.main()
