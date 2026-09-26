@@ -25,6 +25,7 @@ from core.models import ProjectMetadata
 from core.library import LibraryManager
 from core.graph import ProjectGraph
 from core.visualizer import ArchitectureVisualizer
+from core.change_manager import ChangeManager, ChangeEvent
 from core.creator import create_folder, create_file, create_markdown_spec, rename_resource, delete_resource
 
 
@@ -55,6 +56,8 @@ class ProjectSession:
         self.clients: Set[BaseHTTPRequestHandler] = set()
         self.clients_lock = threading.Lock()
         self.initialized = False
+        self.change_manager = ChangeManager(self.project.path)
+        self.change_manager.subscribe(lambda evt: self.notify_clients(evt.event, evt.data))
 
     def initialize(self) -> None:
         """Carrega ou escaneia o grafo inicial e mapeia os arquivos monitorados."""
@@ -114,13 +117,14 @@ class ProjectSession:
                         pass
         return snapshots
 
-    def notify_clients(self, event_type: str = "update") -> None:
+    def notify_clients(self, event_type: str = "update", data: Optional[Dict[str, Any]] = None) -> None:
         """Envia mensagem SSE reativa para todos os clientes conectados a este projeto."""
         with self.clients_lock:
             disconnected = set()
+            payload = json.dumps(data or {}, ensure_ascii=False)
             for client in self.clients:
                 try:
-                    msg = f"event: {event_type}\ndata: {{}}\n\n".encode("utf-8")
+                    msg = f"event: {event_type}\ndata: {payload}\n\n".encode("utf-8")
                     client.wfile.write(msg)
                     client.wfile.flush()
                 except Exception:
@@ -293,6 +297,13 @@ class HubManager:
                         if len(current) != len(session.file_snapshots) or any(
                             current.get(p) != session.file_snapshots.get(p) for p in current
                         ):
+                            session.change_manager.compute_filesystem_delta(session.file_snapshots, current)
+                            try:
+                                from core.git_tracker import GitTracker
+                                status_map = GitTracker(session.project.path).get_status_map()
+                                session.change_manager.update_git_status(status_map)
+                            except Exception:
+                                pass
                             session.rescan()
                     except Exception:
                         pass
@@ -630,6 +641,29 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(200, {"success": True, "path": full_path, "content": content})
             except Exception as e:
                 self._send_json(500, {"success": False, "error": str(e)})
+            return
+
+        # Rota: Alterar status de execução da IA
+        if path == "/api/ai-state":
+            target_path = payload.get("path", "").strip()
+            state = payload.get("state", "idle").strip()
+            if not target_path:
+                self._send_json(400, {"success": False, "error": "Parâmetro 'path' não fornecido."})
+                return
+            evt = session.change_manager.set_ai_state(target_path, state)
+            self._send_json(200, {
+                "success": True,
+                "event": evt.data,
+                "summary": session.change_manager.get_summary()
+            })
+            return
+
+        # Rota: Consultar resumo de alterações ativas (Git + IA)
+        if path == "/api/changes":
+            self._send_json(200, {
+                "success": True,
+                "summary": session.change_manager.get_summary()
+            })
             return
 
         if path == "/api/create-folder":

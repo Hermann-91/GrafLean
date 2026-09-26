@@ -136,6 +136,24 @@ class TestHubServer(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(res.get("success"))
 
+    def test_07b_api_ai_state_and_changes(self):
+        """Valida controle do estado da IA e consulta de alterações via /api/ai-state e /api/changes."""
+        status, res = self._http_post_json("/api/ai-state", {
+            "path": "Index.php",
+            "state": "editing"
+        })
+        self.assertEqual(status, 200)
+        self.assertTrue(res.get("success"))
+        self.assertEqual(res["event"]["state"], "editing")
+        self.assertEqual(res["summary"]["ai_active_count"], 1)
+
+        # Consulta resumo de alterações
+        status, res_changes = self._http_post_json("/api/changes", {})
+        self.assertEqual(status, 200)
+        self.assertTrue(res_changes.get("success"))
+        self.assertIn("ai_tasks", res_changes.get("summary", {}))
+        self.assertEqual(res_changes["summary"]["ai_tasks"].get("Index.php"), "editing")
+
     def test_08_api_remove_project(self):
         """Remove o projeto da biblioteca via POST /api/projects/remove."""
         pid = getattr(self, "registered_id", None)

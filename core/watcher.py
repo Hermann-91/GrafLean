@@ -22,6 +22,7 @@ if parent_dir not in sys.path:
 
 from core.graph import ProjectGraph
 from core.visualizer import ArchitectureVisualizer
+from core.change_manager import ChangeManager, ChangeEvent
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
@@ -61,6 +62,22 @@ class ArchitectureWatcher:
         self.running = False
         self.server: Optional[ThreadedHTTPServer] = None
         self._watcher_thread: Optional[threading.Thread] = None
+
+        self.change_manager = ChangeManager(self.target_dir)
+        self.change_manager.subscribe(self._on_change_event)
+
+    def _on_change_event(self, event: ChangeEvent) -> None:
+        """Dispara evento semântico SSE para todos os navegadores conectados."""
+        with self.clients_lock:
+            disconnected = set()
+            msg = event.to_sse().encode("utf-8")
+            for client in self.clients:
+                try:
+                    client.wfile.write(msg)
+                    client.wfile.flush()
+                except Exception:
+                    disconnected.add(client)
+            self.clients -= disconnected
 
     def get_tracked_files(self) -> Dict[str, float]:
         """Varre o diretório e retorna um dicionário {caminho_absoluto: mtime}."""
@@ -205,6 +222,15 @@ class ArchitectureWatcher:
             if self.has_changes(current):
                 start = time.perf_counter()
                 try:
+                    # Emite eventos semânticos incrementais (node_created, node_changed, node_deleted)
+                    self.change_manager.compute_filesystem_delta(self.file_snapshots, current)
+                    try:
+                        from core.git_tracker import GitTracker
+                        status_map = GitTracker(self.target_dir).get_status_map()
+                        self.change_manager.update_git_status(status_map)
+                    except Exception:
+                        pass
+
                     self.graph.scan_project()
                     self.graph.save_to_file()
                     self.visualizer.generate_html(self.html_path)
@@ -384,6 +410,24 @@ class ArchitectureWatcher:
                         return self._send_json(200, {"success": True, "saved": rel_saved, "data": watcher.get_live_data()})
                     except Exception as e:
                         return self._send_json(400, {"success": False, "error": str(e)})
+
+                elif self.path == "/api/ai-state":
+                    path = payload.get("path", "").strip()
+                    state = payload.get("state", "idle").strip()
+                    if not path:
+                        return self._send_json(400, {"success": False, "error": "Parâmetro 'path' é obrigatório."})
+                    evt = watcher.change_manager.set_ai_state(path, state)
+                    return self._send_json(200, {
+                        "success": True,
+                        "event": evt.data,
+                        "summary": watcher.change_manager.get_summary()
+                    })
+
+                elif self.path == "/api/changes":
+                    return self._send_json(200, {
+                        "success": True,
+                        "summary": watcher.change_manager.get_summary()
+                    })
 
                 self._send_json(404, {"success": False, "error": "Rota não encontrada."})
 
