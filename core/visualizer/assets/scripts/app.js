@@ -646,6 +646,9 @@
             network.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
         }
 
+        let aiHistoryList = [];
+        let isClusteringActive = false;
+
         window.switchPerspective = function(mode) {
             currentPerspective = mode;
             document.querySelectorAll('.perspective-tab').forEach(b => b.classList.remove('active'));
@@ -653,12 +656,16 @@
             if (activeBtn) activeBtn.classList.add('active');
 
             const changeBanner = document.getElementById('change-summary-banner');
+            const changeMiniMap = document.getElementById('change-mini-map');
             if (changeBanner) {
                 if (mode === 'change') {
                     changeBanner.style.display = 'flex';
+                    if (changeMiniMap) changeMiniMap.style.display = 'flex';
                     updateChangeSummaryStats();
+                    updateChangeMiniMap();
                 } else {
                     changeBanner.style.display = 'none';
+                    if (changeMiniMap) changeMiniMap.style.display = 'none';
                 }
             }
 
@@ -684,7 +691,22 @@
             const target = altered[changeFocusIndex];
             const graphId = resolveToGraphNodeId(target.id);
             if (graphId && network) {
-                network.focus(graphId, { scale: 1.2, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+                network.focus(graphId, { scale: 1.25, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+                Mediator.inspectOnly(graphId);
+            }
+        };
+
+        window.focusPreviousChange = function() {
+            const altered = Array.from(allNodesMap.values()).filter(n => n.git || aiTaskStates[n.file] || aiTaskStates[n.id]);
+            if (altered.length === 0) {
+                showToast("Nenhuma alteração ativa no momento.", "info");
+                return;
+            }
+            changeFocusIndex = (changeFocusIndex - 1 + altered.length) % altered.length;
+            const target = altered[changeFocusIndex];
+            const graphId = resolveToGraphNodeId(target.id);
+            if (graphId && network) {
+                network.focus(graphId, { scale: 1.25, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
                 Mediator.inspectOnly(graphId);
             }
         };
@@ -711,11 +733,163 @@
                 badge.innerText = total;
                 badge.style.display = total > 0 ? 'inline-block' : 'none';
             }
+            updateChangeMiniMap();
         }
+
+        function updateChangeMiniMap() {
+            let nNew = 0, nMod = 0, nDel = 0;
+            allNodesMap.forEach(n => {
+                if (n.git === 'new' || aiTaskStates[n.file] === 'creating') nNew++;
+                else if (n.git === 'modified' || aiTaskStates[n.file] === 'editing') nMod++;
+                else if (n.git === 'deleted') nDel++;
+            });
+            const total = nNew + nMod + nDel;
+            const summaryText = document.getElementById('mini-map-summary-text');
+            if (summaryText) {
+                summaryText.innerText = `${total} mutações ativas`;
+            }
+            const barNew = document.getElementById('bar-new');
+            const barMod = document.getElementById('bar-mod');
+            const barDel = document.getElementById('bar-del');
+            if (total === 0) {
+                if (barNew) barNew.style.width = '0%';
+                if (barMod) barMod.style.width = '0%';
+                if (barDel) barDel.style.width = '0%';
+            } else {
+                if (barNew) barNew.style.width = `${(nNew / total) * 100}%`;
+                if (barMod) barMod.style.width = `${(nMod / total) * 100}%`;
+                if (barDel) barDel.style.width = `${(nDel / total) * 100}%`;
+            }
+        }
+
+        // 13. Gaveta Retrátil de Histórico de Operações da IA (Fase E.3)
+        window.toggleAiHistoryDrawer = function(forceState) {
+            const drawer = document.getElementById('ai-history-drawer');
+            if (!drawer) return;
+            const isVisible = drawer.style.display !== 'none';
+            const willShow = typeof forceState === 'boolean' ? forceState : !isVisible;
+            drawer.style.display = willShow ? 'flex' : 'none';
+            if (willShow) {
+                renderAiHistory();
+            }
+        };
+
+        window.renderAiHistory = function() {
+            const listEl = document.getElementById('ai-history-list');
+            const badgeEl = document.getElementById('ai-history-count-badge');
+            if (!listEl) return;
+            if (badgeEl) badgeEl.innerText = aiHistoryList.length;
+
+            if (aiHistoryList.length === 0) {
+                listEl.innerHTML = '<div style="padding:20px; text-align:center; color:#75715e; font-size:11px;">Nenhuma operação registrada pela IA nesta sessão.</div>';
+                return;
+            }
+
+            const stateIcons = {
+                'creating': '🟢',
+                'editing': '🟠',
+                'deleted': '🔴',
+                'analyzing': '⚡',
+                'finished': '✅',
+                'error': '❌',
+                'idle': '⚪'
+            };
+
+            listEl.innerHTML = aiHistoryList.map(item => {
+                const icon = stateIcons[item.state] || '🤖';
+                const fileName = item.file_name || (item.path ? item.path.split('/').pop() : 'arquivo');
+                return `
+                    <div class="ai-history-item" onclick="openFileFromHistory('${item.path}')" title="Clique para abrir ${fileName} no editor">
+                        <span class="ai-history-icon">${icon}</span>
+                        <div class="ai-history-body">
+                            <div class="ai-history-file">${fileName}</div>
+                            <div class="ai-history-msg">${escapeHtml(item.message || item.state)}</div>
+                        </div>
+                        <span class="ai-history-time">${item.time_str || ''}</span>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.openFileFromHistory = function(filePath) {
+            if (!filePath) return;
+            Mediator.loadCode(filePath, 1);
+            const nodeId = resolveToGraphNodeId(`file://${filePath}`) || resolveToGraphNodeId(filePath);
+            if (nodeId && network) {
+                network.focus(nodeId, { scale: 1.2, animation: { duration: 350, easingFunction: 'easeInOutQuad' } });
+                Mediator.inspectOnly(nodeId);
+            }
+        };
+
+        window.clearAiHistory = async function() {
+            aiHistoryList = [];
+            renderAiHistory();
+            try {
+                await fetch('/api/ai-history/clear', { method: 'POST' });
+            } catch (e) {}
+            showToast('Histórico da IA limpo.');
+        };
+
+        // 14. Clustering Semântico por Pasta/Módulo (Fase F.2)
+        window.toggleClustering = function() {
+            if (!network) return;
+            isClusteringActive = !isClusteringActive;
+            const btn = document.getElementById('btn-toggle-clustering');
+
+            if (isClusteringActive) {
+                if (btn) {
+                    btn.style.background = '#66d9ef';
+                    btn.style.color = '#000000';
+                    btn.style.fontWeight = 'bold';
+                }
+                // Identifica diretórios de topo
+                const dirClusters = new Map();
+                allNodesMap.forEach(n => {
+                    if (n.file) {
+                        const parts = n.file.split('/');
+                        const topDir = parts.length > 1 ? parts[0] : 'root';
+                        if (!dirClusters.has(topDir)) dirClusters.set(topDir, []);
+                        dirClusters.get(topDir).push(n.id);
+                    }
+                });
+
+                dirClusters.forEach((nodeIds, dirName) => {
+                    if (nodeIds.length > 2) {
+                        const clusterOptions = {
+                            joinCondition: function(childOptions) {
+                                return nodeIds.includes(childOptions.id);
+                            },
+                            processProperties: function(clusterOptions, childNodes) {
+                                clusterOptions.label = `📦 ${dirName} (${childNodes.length})`;
+                                clusterOptions.shape = 'box';
+                                clusterOptions.color = { background: '#181818', border: '#66d9ef' };
+                                clusterOptions.font = { color: '#66d9ef', bold: true, size: 12 };
+                                clusterOptions.borderWidth = 2;
+                                return clusterOptions;
+                            }
+                        };
+                        network.cluster(clusterOptions);
+                    }
+                });
+                showToast("Módulos agrupados em clusters por pasta. Duplo clique para abrir.", "info");
+            } else {
+                if (btn) {
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.style.fontWeight = '';
+                }
+                refreshGraphData();
+                showToast("Clusters desagrupados.", "info");
+            }
+        };
 
         function updateNodesCount() {
             const badge = document.getElementById('graph-nodes-count');
             if (badge) badge.innerText = `${nodes.length} nós ativos`;
+            const footerNodes = document.getElementById('footer-nodes-count');
+            if (footerNodes) footerNodes.innerText = `${allNodesMap.size} nós`;
+            const footerEdges = document.getElementById('footer-edges-count');
+            if (footerEdges) footerEdges.innerText = `${rawEdges.length} conexões`;
         }
         updateNodesCount();
 
@@ -1781,9 +1955,10 @@
                     if (!payload) return;
                     if (eventType === 'node_created') {
                         const nodeId = payload.id || `file://${payload.path}`;
+                        const fileName = payload.label || payload.path.split('/').pop();
                         const rawNode = {
                             id: nodeId,
-                            label: payload.label || payload.path.split('/').pop(),
+                            label: fileName,
                             title: `🏷️ ${payload.path}\n🟢 Arquivo novo criado`,
                             type: payload.type || "file",
                             file: payload.path,
@@ -1797,8 +1972,29 @@
                         };
                         allNodesMap.set(nodeId, rawNode);
                         if (nodes && !nodes.get(nodeId)) {
-                            nodes.add(formatVisNode(rawNode));
+                            const formatted = formatVisNode(rawNode);
+                            const finalSize = formatted.size || 15;
+                            formatted.size = 2; // Inicia pequeno para efeito de scale-in
+                            nodes.add(formatted);
+                            setTimeout(() => {
+                                if (nodes.get(nodeId)) {
+                                    nodes.update({ id: nodeId, size: finalSize });
+                                }
+                            }, 50);
                         }
+                        // Registra no histórico da IA
+                        aiHistoryList.unshift({
+                            id: `local_new_${Date.now()}`,
+                            timestamp: Date.now() / 1000,
+                            time_str: new Date().toLocaleTimeString(),
+                            path: payload.path,
+                            file_name: fileName,
+                            state: 'creating',
+                            message: `Arquivo criado: ${fileName}`
+                        });
+                        if (aiHistoryList.length > 50) aiHistoryList.pop();
+                        renderAiHistory();
+
                         updateChangeSummaryStats();
                         showToast(`Novo arquivo detectado: ${rawNode.label}`, "info");
                     } else if (eventType === 'node_changed') {
@@ -1807,18 +2003,53 @@
                         if (raw) {
                             raw.git = "modified";
                             if (nodes && nodes.get(nodeId)) {
-                                nodes.update(formatVisNode(raw));
+                                // Efeito de destaque luminoso âmbar temporário
+                                nodes.update({
+                                    id: nodeId,
+                                    borderWidth: 4,
+                                    color: { background: "#281c10", border: "#fd971f" }
+                                });
+                                setTimeout(() => {
+                                    if (nodes.get(nodeId)) {
+                                        nodes.update(formatVisNode(raw));
+                                    }
+                                }, 700);
                             }
                         }
                         updateChangeSummaryStats();
                     } else if (eventType === 'node_deleted') {
                         const nodeId = payload.id || `file://${payload.path}`;
+                        const fileName = payload.path ? payload.path.split('/').pop() : 'arquivo';
                         allNodesMap.delete(nodeId);
                         if (nodes && nodes.get(nodeId)) {
-                            nodes.remove(nodeId);
+                            // Dissolução suave: encolhe e fica vermelho antes de remover
+                            nodes.update({
+                                id: nodeId,
+                                color: { background: "#281014", border: "#f92672" },
+                                size: 3
+                            });
+                            setTimeout(() => {
+                                if (nodes.get(nodeId)) {
+                                    nodes.remove(nodeId);
+                                }
+                                updateChangeSummaryStats();
+                            }, 350);
+                        } else {
+                            updateChangeSummaryStats();
                         }
-                        updateChangeSummaryStats();
-                        showToast(`Arquivo excluído: ${payload.path.split('/').pop()}`, "info");
+                        aiHistoryList.unshift({
+                            id: `local_del_${Date.now()}`,
+                            timestamp: Date.now() / 1000,
+                            time_str: new Date().toLocaleTimeString(),
+                            path: payload.path,
+                            file_name: fileName,
+                            state: 'deleted',
+                            message: `Arquivo excluído: ${fileName}`
+                        });
+                        if (aiHistoryList.length > 50) aiHistoryList.pop();
+                        renderAiHistory();
+
+                        showToast(`Arquivo excluído: ${fileName}`, "info");
                     } else if (eventType === 'edge_added') {
                         const edgeId = `${payload.source}->${payload.target}`;
                         if (edges && !edges.get(edgeId)) {
@@ -1838,15 +2069,49 @@
                         }
                     } else if (eventType === 'ai_state') {
                         aiTaskStates[payload.path] = payload.state;
+                        const fileName = payload.path ? payload.path.split('/').pop() : 'arquivo';
+
+                        // Atualiza indicador da toolbar
                         const aiIndicator = document.getElementById('ai-active-indicator');
                         if (aiIndicator) {
-                            if (payload.state === 'creating' || payload.state === 'editing') {
+                            if (payload.state === 'creating' || payload.state === 'editing' || payload.state === 'analyzing') {
                                 aiIndicator.style.display = 'inline-block';
-                                aiIndicator.innerText = `⚡ IA: ${payload.state.toUpperCase()} (${payload.path.split('/').pop()})`;
+                                aiIndicator.innerText = `⚡ IA: ${payload.state.toUpperCase()} (${fileName})`;
                             } else if (payload.state === 'idle' || payload.state === 'finished') {
                                 aiIndicator.style.display = 'none';
                             }
                         }
+
+                        // Atualiza a cápsula no topo (AI Status Capsule)
+                        const capsule = document.getElementById('ai-status-capsule');
+                        const capsuleText = document.getElementById('ai-capsule-text');
+                        if (capsule) {
+                            if (payload.state === 'creating' || payload.state === 'editing' || payload.state === 'analyzing') {
+                                capsule.style.display = 'inline-flex';
+                                if (capsuleText) capsuleText.innerText = `⚡ ${payload.state.toUpperCase()}: ${fileName}`;
+                            } else if (payload.state === 'idle' || payload.state === 'finished') {
+                                if (capsuleText) capsuleText.innerText = `✅ IA: Concluído`;
+                                setTimeout(() => {
+                                    if (capsule && (!payload.state || payload.state === 'idle' || payload.state === 'finished')) {
+                                        capsule.style.display = 'none';
+                                    }
+                                }, 3000);
+                            }
+                        }
+
+                        // Registra no histórico de operações da IA
+                        aiHistoryList.unshift({
+                            id: `ai_${Date.now()}`,
+                            timestamp: Date.now() / 1000,
+                            time_str: payload.time_str || new Date().toLocaleTimeString(),
+                            path: payload.path,
+                            file_name: fileName,
+                            state: payload.state,
+                            message: payload.message || `${payload.state.toUpperCase()}: ${fileName}`
+                        });
+                        if (aiHistoryList.length > 50) aiHistoryList.pop();
+                        renderAiHistory();
+
                         const nodeId = `file://${payload.path}`;
                         const raw = allNodesMap.get(nodeId);
                         if (raw && nodes && nodes.get(nodeId)) {
@@ -1857,9 +2122,21 @@
                         const nodeId = `file://${payload.path}`;
                         const raw = allNodesMap.get(nodeId);
                         if (raw) {
-                            raw.git = payload.status;
-                            if (nodes && nodes.get(nodeId)) {
-                                nodes.update(formatVisNode(raw));
+                            if (payload.status === 'committed') {
+                                // Transição suave de commit: esmaece para neutro sem salto
+                                raw.git = '';
+                                if (nodes && nodes.get(nodeId)) {
+                                    nodes.update({
+                                        id: nodeId,
+                                        color: { background: "#141414", border: "#66d9ef" },
+                                        borderWidth: 2
+                                    });
+                                }
+                            } else {
+                                raw.git = payload.status;
+                                if (nodes && nodes.get(nodeId)) {
+                                    nodes.update(formatVisNode(raw));
+                                }
                             }
                         }
                         updateChangeSummaryStats();
@@ -1906,6 +2183,33 @@
                     };
                 };
                 connectSSE();
+
+                // Carrega histórico prévio da IA
+                fetch('/api/ai-history')
+                    .then(r => r.json())
+                    .then(json => {
+                        if (json.success && Array.isArray(json.history)) {
+                            aiHistoryList = json.history;
+                            renderAiHistory();
+                        }
+                    })
+                    .catch(() => {});
+
+                // Telemetria leve de FPS (Fase F.5)
+                let frameCount = 0;
+                let lastFpsTime = performance.now();
+                function fpsLoop(now) {
+                    frameCount++;
+                    if (now - lastFpsTime >= 1000) {
+                        const fps = Math.round((frameCount * 1000) / (now - lastFpsTime));
+                        const fpsEl = document.getElementById('telemetry-fps');
+                        if (fpsEl) fpsEl.innerText = `${fps} FPS`;
+                        frameCount = 0;
+                        lastFpsTime = now;
+                    }
+                    requestAnimationFrame(fpsLoop);
+                }
+                requestAnimationFrame(fpsLoop);
             }
         }
         initLiveReload();
@@ -2336,15 +2640,22 @@
         }
 
         window.addEventListener('keydown', (e) => {
+            const activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toLowerCase() : '';
+            const isInputFocused = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement && document.activeElement.classList.contains('CodeMirror-code'));
+
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
                 e.preventDefault();
                 openFindInFiles();
             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
                 e.preventDefault();
                 openQuickPalette();
+            } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') {
+                e.preventDefault();
+                toggleAiHistoryDrawer();
             } else if (e.key === 'Escape') {
                 closeQuickPalette();
                 closeFindInFiles();
+                toggleAiHistoryDrawer(false);
             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
                 if (currentLoadedFilePath) {
                     e.preventDefault();
@@ -2353,6 +2664,20 @@
             } else if (e.ctrlKey && e.key === 'Tab') {
                 e.preventDefault();
                 cycleNextTab(e.shiftKey ? -1 : 1);
+            } else if (e.altKey && (e.key.toLowerCase() === 'n' || e.key === 'ArrowRight')) {
+                e.preventDefault();
+                focusNextChange();
+            } else if (e.altKey && (e.key.toLowerCase() === 'p' || e.key === 'ArrowLeft')) {
+                e.preventDefault();
+                focusPreviousChange();
+            } else if (!isInputFocused && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                if (e.key === '1') {
+                    switchPerspective('code');
+                } else if (e.key === '2') {
+                    switchPerspective('change');
+                } else if (e.key === '3') {
+                    switchPerspective('impact');
+                }
             }
         });
     
