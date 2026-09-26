@@ -675,7 +675,7 @@ class ArchitectureVisualizer:
             align-items: center;
             gap: 6px;
             background: #0a0a0a;
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 5px 5px 0 0;
             color: #75715e;
             font-weight: 500;
@@ -686,7 +686,10 @@ class ArchitectureVisualizer:
             user-select: none;
             transition: all 0.15s ease;
             white-space: nowrap;
-            max-width: 220px;
+            max-width: 175px;
+            min-width: 90px;
+            flex-shrink: 0;
+            position: relative;
         }}
         .sublime-tab-item:hover {{
             color: #f8f8f2;
@@ -701,19 +704,41 @@ class ArchitectureVisualizer:
             margin-bottom: -1px;
             z-index: 2;
         }}
+        .sublime-tab-icon {{
+            flex-shrink: 0;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+        }}
+        .sublime-tab-name {{
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }}
         .sublime-tab-close {{
+            flex-shrink: 0;
             font-size: 11px;
-            opacity: 0.5;
-            padding: 1px 4px;
+            opacity: 0.6;
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             border-radius: 3px;
             cursor: pointer;
             transition: all 0.12s ease;
             margin-left: 2px;
         }}
+        .sublime-tab-item:hover .sublime-tab-close {{
+            opacity: 0.85;
+        }}
         .sublime-tab-close:hover {{
-            opacity: 1;
+            opacity: 1 !important;
             color: #f92672;
-            background: rgba(249, 38, 114, 0.2);
+            background: rgba(249, 38, 114, 0.25);
         }}
         .sublime-toolbar-actions {{
             display: flex;
@@ -1175,12 +1200,22 @@ class ArchitectureVisualizer:
                     <div class="sublime-tab-item ${{isActive ? 'active' : ''}}" 
                          onclick="switchEditorTab('${{filePath}}')" 
                          title="${{filePath}}">
-                        <span>${{iconInfo.icon}}</span>
+                        <span class="sublime-tab-icon">${{iconInfo.icon}}</span>
                         <span class="sublime-tab-name">${{fileName}}</span>
                         <span class="sublime-tab-close" onclick="closeEditorTab('${{filePath}}', event)" title="Fechar Aba (Ctrl+W)">✕</span>
                     </div>
                 `;
             }}).join('');
+
+            if (!track.__wheelBound) {{
+                track.__wheelBound = true;
+                track.addEventListener('wheel', (e) => {{
+                    if (e.deltaY !== 0) {{
+                        e.preventDefault();
+                        track.scrollLeft += e.deltaY;
+                    }}
+                }}, {{ passive: false }});
+            }}
 
             const activeEl = track.querySelector('.sublime-tab-item.active');
             if (activeEl) {{
