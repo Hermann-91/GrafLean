@@ -718,6 +718,10 @@ class ArchitectureVisualizer:
             white-space: nowrap;
             display: block;
         }}
+        .sublime-tab-name.is-preview {{
+            font-style: italic;
+            opacity: 0.85;
+        }}
         .sublime-tab-close {{
             flex-shrink: 0;
             font-size: 11px;
@@ -1288,6 +1292,7 @@ class ArchitectureVisualizer:
         let currentLoadedFilePath = null;
         let openFolders = new Set(JSON.parse(localStorage.getItem('graf_lens_open_folders') || '[""]'));
         let openEditorTabs = [];
+        let previewTabPath = null;
         try {{
             openEditorTabs = JSON.parse(localStorage.getItem('graf_open_tabs') || '[]');
         }} catch (e) {{
@@ -1296,8 +1301,18 @@ class ArchitectureVisualizer:
 
         function saveOpenTabsToStorage() {{
             try {{
-                localStorage.setItem('graf_open_tabs', JSON.stringify(openEditorTabs));
+                const persistentTabs = openEditorTabs.filter(p => p !== previewTabPath);
+                localStorage.setItem('graf_open_tabs', JSON.stringify(persistentTabs));
             }} catch (e) {{}}
+        }}
+
+        function pinEditorTab(filePath) {{
+            if (!filePath) return;
+            if (previewTabPath === filePath) {{
+                previewTabPath = null;
+                saveOpenTabsToStorage();
+                renderEditorTabs();
+            }}
         }}
 
         function renderEditorTabs() {{
@@ -1313,12 +1328,14 @@ class ArchitectureVisualizer:
                 const fileName = filePath.split('/').pop();
                 const iconInfo = typeof getFileIcon === 'function' ? getFileIcon(fileName) : {{ icon: '📄' }};
                 const isActive = filePath === currentLoadedFilePath;
+                const isPreview = (filePath === previewTabPath);
                 return `
                     <div class="sublime-tab-item ${{isActive ? 'active' : ''}}" 
                          onclick="switchEditorTab('${{filePath}}')" 
-                         title="${{filePath}}">
+                         ondblclick="pinEditorTab('${{filePath}}')" 
+                         title="${{filePath}}${{isPreview ? ' (Pré-visualização • Duplo-clique para fixar)' : ''}}">
                         <span class="sublime-tab-icon">${{iconInfo.icon}}</span>
-                        <span class="sublime-tab-name">${{fileName}}</span>
+                        <span class="sublime-tab-name ${{isPreview ? 'is-preview' : ''}}">${{fileName}}</span>
                         <span class="sublime-tab-close" onclick="closeEditorTab('${{filePath}}', event)" title="Fechar Aba (Ctrl+W)">✕</span>
                     </div>
                 `;
@@ -1340,10 +1357,30 @@ class ArchitectureVisualizer:
             }}
         }}
 
-        function openEditorTab(filePath, targetLine) {{
+        function openEditorTab(filePath, targetLine, isPreview = false) {{
             if (!filePath) return;
-            if (!openEditorTabs.includes(filePath)) {{
-                openEditorTabs.push(filePath);
+            const alreadyOpenIndex = openEditorTabs.indexOf(filePath);
+
+            if (isPreview) {{
+                if (alreadyOpenIndex !== -1) {{
+                    // Já aberto (preview ou fixo), apenas mantém
+                }} else if (previewTabPath && openEditorTabs.includes(previewTabPath)) {{
+                    const previewIdx = openEditorTabs.indexOf(previewTabPath);
+                    openEditorTabs[previewIdx] = filePath;
+                    previewTabPath = filePath;
+                    saveOpenTabsToStorage();
+                }} else {{
+                    openEditorTabs.push(filePath);
+                    previewTabPath = filePath;
+                    saveOpenTabsToStorage();
+                }}
+            }} else {{
+                if (filePath === previewTabPath) {{
+                    previewTabPath = null;
+                }}
+                if (alreadyOpenIndex === -1) {{
+                    openEditorTabs.push(filePath);
+                }}
                 saveOpenTabsToStorage();
             }}
             renderEditorTabs();
@@ -1359,6 +1396,9 @@ class ArchitectureVisualizer:
             const index = openEditorTabs.indexOf(filePath);
             if (index === -1) return;
 
+            if (filePath === previewTabPath) {{
+                previewTabPath = null;
+            }}
             openEditorTabs.splice(index, 1);
             saveOpenTabsToStorage();
 
@@ -1819,7 +1859,7 @@ class ArchitectureVisualizer:
                 }}
             }},
 
-            select(nodeId, origin) {{
+            select(nodeId, origin, targetLine, isPreview = false) {{
                 if (!nodeId) return;
                 this.selectedId = nodeId;
                 this.currentNode = rawNodes.find(n => n.id === nodeId);
@@ -1851,7 +1891,7 @@ class ArchitectureVisualizer:
 
                 // D. Carrega o Código no Editor Monokai
                 if (this.currentNode) {{
-                    this.loadCode(this.currentNode.file, this.currentNode.line);
+                    this.loadCode(this.currentNode.file, targetLine || this.currentNode.line, isPreview);
                 }}
             }},
 
@@ -1924,7 +1964,7 @@ class ArchitectureVisualizer:
                 }}
             }},
 
-            async loadCode(filePath, targetLine) {{
+            async loadCode(filePath, targetLine, isPreview = false) {{
                 currentLoadedFilePath = filePath;
                 const container = document.getElementById('sublime-table-container');
                 const textarea = document.getElementById('sublime-editor-textarea');
@@ -1938,7 +1978,7 @@ class ArchitectureVisualizer:
                     return;
                 }}
 
-                openEditorTab(filePath, targetLine);
+                openEditorTab(filePath, targetLine, isPreview);
                 const fileName = filePath.split('/').pop();
 
                 // Lazy Loading: busca do cache local ou via API sob demanda
@@ -2158,7 +2198,11 @@ class ArchitectureVisualizer:
                 row.setAttribute('data-id', comp.full_id);
                 row.onclick = (e) => {{
                     e.stopPropagation();
-                    Mediator.select(comp.full_id, 'tree');
+                    Mediator.select(comp.full_id, 'tree', null, true);
+                }};
+                row.ondblclick = (e) => {{
+                    e.stopPropagation();
+                    pinEditorTab(comp.relative_path);
                 }};
 
                 const spacer = document.createElement('span');
@@ -2220,7 +2264,11 @@ class ArchitectureVisualizer:
                         symRow.setAttribute('data-id', sym.id);
                         symRow.onclick = (e) => {{
                             e.stopPropagation();
-                            Mediator.select(sym.id, 'tree');
+                            Mediator.select(sym.id, 'tree', null, true);
+                        }};
+                        symRow.ondblclick = (e) => {{
+                            e.stopPropagation();
+                            pinEditorTab(comp.relative_path);
                         }};
                         const symIcon = sym.type === 'class' ? '🏛️' : (sym.type === 'interface' ? '📜' : '⚡');
                         symRow.innerHTML = `<span>${{symIcon}}</span> <span>${{sym.name}}</span>`;
@@ -2230,6 +2278,7 @@ class ArchitectureVisualizer:
 
                     row.ondblclick = (e) => {{
                         e.stopPropagation();
+                        pinEditorTab(comp.relative_path);
                         symContainer.classList.toggle('open');
                     }};
                 }}
@@ -2529,6 +2578,9 @@ class ArchitectureVisualizer:
             const statusLang = document.getElementById('sublime-status-lang');
 
             if (isEditMode) {{
+                if (currentLoadedFilePath) {{
+                    pinEditorTab(currentLoadedFilePath);
+                }}
                 tableContainer.style.display = 'none';
                 const source = rawFileSources[currentLoadedFilePath] || '';
 

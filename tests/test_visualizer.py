@@ -145,6 +145,9 @@ class TestArchitectureVisualizer(unittest.TestCase):
             self.assertIn("cycleNextTab", content)
             self.assertIn("renderEditorTabs", content)
             self.assertIn("openEditorTabs", content)
+            self.assertIn("previewTabPath", content)
+            self.assertIn("pinEditorTab", content)
+            self.assertIn("is-preview", content)
 
 
 if __name__ == "__main__":
