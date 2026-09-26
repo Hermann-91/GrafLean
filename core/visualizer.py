@@ -351,30 +351,49 @@ class ArchitectureVisualizer:
             background-color: #000000;
         }}
 
-        /* Search input */
-        .search-box {{
-            position: relative;
+        /* Barra de Ações da Árvore (Retrair, Buscar Símbolos, Buscar Texto e Filtro) */
+        .tree-toolbar {{
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 8px;
         }}
-        .search-input {{
-            width: 100%;
-            padding: 8px 10px 8px 28px;
+        .tree-action-btn {{
+            width: 28px;
+            min-width: 28px;
+            height: 28px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            background: #141414;
+            border: 1px solid #282828;
+            border-radius: 5px;
+            color: #f8f8f2;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }}
+        .tree-action-btn:hover {{
+            background: #222222;
+            border-color: #66d9ef;
+            color: #66d9ef;
+        }}
+        .tree-toolbar .search-input {{
+            flex: 1;
+            min-width: 60px;
+            height: 28px;
+            padding: 0 8px;
             background: #0a0a0a;
             border: 1px solid #222222;
-            border-radius: 6px;
+            border-radius: 5px;
             color: #f8f8f2;
             font-size: 11px;
             outline: none;
         }}
-        .search-input:focus {{
+        .tree-toolbar .search-input:focus {{
             border-color: #66d9ef;
-        }}
-        .search-icon {{
-            position: absolute;
-            left: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 11px;
-            opacity: 0.6;
         }}
 
         /* Project File Tree Styles (Composite Pattern) */
@@ -1165,10 +1184,10 @@ class ArchitectureVisualizer:
 
                 <!-- Sub-aba 1: Árvore de Arquivos -->
                 <div class="nav-content-pane" id="nav-pane-tree">
-                    <div class="search-box">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" class="search-input" id="search" placeholder="Filtrar arquivos ou classes..." oninput="onSearchInput(this.value)">
-                        <button onclick="openFindInFiles()" title="Buscar texto nos arquivos (Ctrl+Shift+F)" style="background:transparent; border:none; color:#75715e; cursor:pointer; font-size:12px; padding:0 4px;" onmouseover="this.style.color='#66d9ef'" onmouseout="this.style.color='#75715e'">📝</button>
+                    <div class="tree-toolbar">
+                        <button class="sublime-btn tree-action-btn" id="btn-collapse-tree" onclick="collapseAllFolders()" title="Recolher Todas as Pastas (Retrair Árvore)">⊟</button>
+                        <button class="sublime-btn tree-action-btn" id="btn-find-in-files-tree" onclick="openFindInFiles()" title="Buscar Texto nos Arquivos (Ctrl+Shift+F)">🔍</button>
+                        <input type="text" class="search-input" id="search" placeholder="Filtrar na árvore..." oninput="onSearchInput(this.value)">
                     </div>
 
                     <div class="tree-container" id="tree-root"></div>
@@ -2312,6 +2331,34 @@ class ArchitectureVisualizer:
             }}
         }}
         autoLoadInitialFile();
+
+        // 5.1. Função para recolher/retrair todas as pastas e símbolos da árvore
+        function collapseAllFolders() {{
+            openFolders.clear();
+            try {{
+                localStorage.setItem('graf_lens_open_folders', JSON.stringify([]));
+            }} catch (e) {{}}
+
+            const rootNode = document.querySelector('#tree-root > .tree-node');
+            if (rootNode) {{
+                rootNode.querySelectorAll('.tree-children').forEach((childEl, idx) => {{
+                    if (idx > 0) childEl.classList.remove('open');
+                }});
+                // Atualiza APENAS as linhas que são pastas (possuem .tree-arrow)
+                rootNode.querySelectorAll('.tree-row').forEach((row, idx) => {{
+                    const arrow = row.querySelector('.tree-arrow');
+                    if (arrow && idx > 0) {{
+                        arrow.classList.remove('open');
+                        const icon = row.querySelector('span:nth-child(2)');
+                        const nameEl = row.querySelector('span:nth-child(3)');
+                        if (icon && nameEl) {{
+                            icon.innerText = getFolderIcon(nameEl.innerText, false);
+                        }}
+                    }}
+                }});
+            }}
+            showToast('📁 Todas as pastas foram recolhidas');
+        }}
 
 
         // 6. Sub-abas de Navegação (Árvore vs Inspetor)
