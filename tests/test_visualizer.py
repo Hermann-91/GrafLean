@@ -97,6 +97,31 @@ class TestArchitectureVisualizer(unittest.TestCase):
             self.assertIn('"level": 2', content)
             self.assertIn('"level": 3', content)
 
+    def test_generates_html_with_quick_palette_and_sublime_oled_theme(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            graph = ProjectGraph(tmp_dir)
+            node_file = Node(id="file://index.php", name="index.php", symbol_type=SymbolType.FILE, file_path="index.php", line=1)
+            graph.nodes = {"file://index.php": node_file}
+            graph.edges = []
+            graph.analyzer = ArchitectureAnalyzer([node_file], [])
+            graph.analyzer.analyze_all()
+
+            viz = ArchitectureVisualizer(graph)
+            out_file = os.path.join(tmp_dir, "map.html")
+            path = viz.generate_html(out_file)
+
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("quick-palette-backdrop", content)
+            self.assertIn("quick-palette-input", content)
+            self.assertIn("openQuickPalette", content)
+            self.assertIn("btn-quick-open", content)
+            self.assertIn("CodeMirror", content)
+            self.assertIn("sublime-table", content)
+            self.assertIn("#000000", content)
+
 
 if __name__ == "__main__":
     unittest.main()
+

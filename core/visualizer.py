@@ -112,8 +112,26 @@ class ArchitectureVisualizer:
     <!-- Vis.js para Renderização de Grafo -->
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     
-    <!-- Highlight.js: Motor de Sintaxe Universal (Suporte Nativo a PHP, Python, JS, TS) -->
+    <!-- Highlight.js: Motor de Sintaxe Universal (Suporte Nativo a PHP, Python, JS, TS, Bash, YAML) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/php.min.js"></script>
+
+    <!-- CodeMirror: Editor com Realce de Sintaxe em Tempo Real e Word-Wrap (Estilo Sublime) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/php/php.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
 
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -138,8 +156,8 @@ class ArchitectureVisualizer:
         }}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-            background-color: #11111b;
-            color: #cdd6f4;
+            background-color: #000000;
+            color: #f8f8f2;
             display: flex;
             height: 100vh;
             overflow: hidden;
@@ -150,12 +168,12 @@ class ArchitectureVisualizer:
             width: 580px;
             min-width: 380px;
             max-width: 90vw;
-            background: #11111b;
-            border-right: 1px solid rgba(69, 71, 90, 0.4);
+            background: #000000;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             flex-direction: column;
             z-index: 100;
-            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
             transition: margin-left 0.25s ease;
             position: relative;
         }}
@@ -168,38 +186,36 @@ class ArchitectureVisualizer:
             width: 7px;
             min-width: 7px;
             cursor: col-resize;
-            background: rgba(69, 71, 90, 0.35);
+            background: rgba(255, 255, 255, 0.08);
             transition: background 0.15s ease, box-shadow 0.15s ease;
             z-index: 120;
             user-select: none;
         }}
         #resizer:hover, #resizer.dragging {{
-            background: #89b4fa !important;
-            box-shadow: 0 0 12px rgba(137, 180, 250, 0.8) !important;
+            background: #66d9ef !important;
+            box-shadow: 0 0 12px rgba(102, 217, 239, 0.8) !important;
         }}
-
-
 
         /* Header Superior do Workspace */
         .workspace-header {{
             padding: 12px 16px;
-            border-bottom: 1px solid rgba(69, 71, 90, 0.25);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #11111b;
+            background: #000000;
         }}
         .brand-title {{
             font-size: 15px;
             font-weight: 700;
-            color: #89b4fa;
+            color: #66d9ef;
             display: flex;
             align-items: center;
             gap: 8px;
         }}
         .brand-sub {{
             font-size: 11px;
-            color: #a6adc8;
+            color: #75715e;
         }}
 
         /* Layout Dividido: Coluna de Navegação + Coluna de Código */
@@ -218,8 +234,8 @@ class ArchitectureVisualizer:
             max-width: 480px;
             display: flex;
             flex-direction: column;
-            background: #11111b;
-            border-right: 1px solid rgba(69, 71, 90, 0.25);
+            background: #000000;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
             overflow: hidden;
             transition: none;
         }}
@@ -242,8 +258,8 @@ class ArchitectureVisualizer:
         .nav-header-tabs {{
             display: flex;
             align-items: center;
-            background: #11111b;
-            border-bottom: 1px solid rgba(69, 71, 90, 0.25);
+            background: #000000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             padding: 4px 6px 0;
             gap: 4px;
         }}
@@ -253,7 +269,7 @@ class ArchitectureVisualizer:
             background: transparent;
             border: none;
             border-bottom: 2px solid transparent;
-            color: #a6adc8;
+            color: #75715e;
             font-size: 12.5px;
             font-weight: 600;
             cursor: pointer;
@@ -265,26 +281,26 @@ class ArchitectureVisualizer:
             white-space: nowrap;
         }}
         .nav-tab-btn:hover {{
-            color: #cdd6f4;
+            color: #f8f8f2;
         }}
         .nav-tab-btn.active {{
-            color: #89b4fa;
-            border-bottom-color: #89b4fa;
-            background: rgba(49, 50, 68, 0.35);
+            color: #66d9ef;
+            border-bottom-color: #66d9ef;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 4px 4px 0 0;
         }}
         .nav-toggle-btn {{
             padding: 4px 8px;
             background: transparent;
             border: none;
-            color: #6c7086;
+            color: #75715e;
             cursor: pointer;
             font-size: 11px;
             border-radius: 4px;
         }}
         .nav-toggle-btn:hover {{
-            background: #313244;
-            color: #cdd6f4;
+            background: #1f1f1f;
+            color: #f8f8f2;
         }}
 
         .nav-content-pane {{
@@ -307,8 +323,8 @@ class ArchitectureVisualizer:
             user-select: none;
         }}
         #internal-resizer:hover, #internal-resizer.dragging {{
-            background: #89b4fa !important;
-            box-shadow: 0 0 8px rgba(137, 180, 250, 0.6) !important;
+            background: #66d9ef !important;
+            box-shadow: 0 0 8px rgba(102, 217, 239, 0.6) !important;
         }}
 
         /* 2. Sub-Painel de Código */
@@ -327,15 +343,15 @@ class ArchitectureVisualizer:
         .search-input {{
             width: 100%;
             padding: 8px 10px 8px 28px;
-            background: #181825;
-            border: 1px solid #45475a;
+            background: #0a0a0a;
+            border: 1px solid #222222;
             border-radius: 6px;
-            color: #cdd6f4;
+            color: #f8f8f2;
             font-size: 11px;
             outline: none;
         }}
         .search-input:focus {{
-            border-color: #89b4fa;
+            border-color: #66d9ef;
         }}
         .search-icon {{
             position: absolute;
@@ -370,26 +386,26 @@ class ArchitectureVisualizer:
             text-overflow: ellipsis;
         }}
         .tree-row:hover {{
-            background: rgba(49, 50, 68, 0.5);
+            background: rgba(255, 255, 255, 0.06);
         }}
         .tree-row.active {{
-            background: rgba(137, 180, 250, 0.2);
-            border-left: 3px solid #89b4fa;
-            color: #89b4fa;
+            background: rgba(255, 255, 255, 0.09);
+            border-left: 3px solid #66d9ef;
+            color: #66d9ef;
         }}
         .tree-arrow {{
             font-size: 10px;
             width: 10px;
             display: inline-block;
             transition: transform 0.2s ease;
-            color: #6c7086;
+            color: #75715e;
         }}
         .tree-arrow.open {{
             transform: rotate(90deg);
         }}
         .tree-children {{
             margin-left: 12px;
-            border-left: 1px dashed rgba(69, 71, 90, 0.5);
+            border-left: 1px dashed rgba(255, 255, 255, 0.15);
             padding-left: 3px;
             display: none;
         }}
@@ -398,7 +414,7 @@ class ArchitectureVisualizer:
         }}
         .tree-file-name {{
             font-weight: 700;
-            color: #cdd6f4;
+            color: #f8f8f2;
         }}
         .tree-symbol-row {{
             margin-left: 14px;
@@ -407,26 +423,27 @@ class ArchitectureVisualizer:
             display: flex;
             align-items: center;
             gap: 5px;
-            color: #a6adc8;
+            color: #75715e;
             cursor: pointer;
             border-radius: 3px;
         }}
         .tree-symbol-row:hover {{
-            background: rgba(49, 50, 68, 0.4);
-            color: #cdd6f4;
+            background: rgba(255, 255, 255, 0.06);
+            color: #f8f8f2;
         }}
         .tree-symbol-row.active {{
-            background: rgba(166, 227, 161, 0.2);
-            color: #a6e3a1;
+            background: rgba(166, 226, 46, 0.15);
+            color: #a6e22e;
             font-weight: 600;
         }}
         .badge-count {{
             font-size: 9px;
             padding: 1px 5px;
-            background: #313244;
+            background: #141414;
             border-radius: 8px;
             margin-left: auto;
-            color: #a6adc8;
+            color: #75715e;
+            border: 1px solid #242424;
         }}
 
         /* Badges de Status Git */
@@ -490,7 +507,7 @@ class ArchitectureVisualizer:
             margin-left: auto;
             background: transparent;
             border: none;
-            color: #6c7086;
+            color: #75715e;
             font-size: 14px;
             cursor: pointer;
             padding: 0 4px;
@@ -502,7 +519,7 @@ class ArchitectureVisualizer:
             opacity: 1;
         }}
         .tree-more-btn:hover {{
-            color: #89b4fa;
+            color: #66d9ef;
             transform: scale(1.2);
         }}
 
@@ -510,10 +527,11 @@ class ArchitectureVisualizer:
         .tree-context-menu {{
             position: fixed;
             z-index: 99999;
-            background: #181825;
-            border: 1px solid #45475a;
+            background: rgba(13, 13, 13, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
             padding: 6px;
             min-width: 170px;
             display: flex;
@@ -523,9 +541,9 @@ class ArchitectureVisualizer:
         .tree-context-header {{
             font-size: 10.5px;
             font-weight: 600;
-            color: #89b4fa;
+            color: #66d9ef;
             padding: 4px 8px 6px;
-            border-bottom: 1px solid #313244;
+            border-bottom: 1px solid #222222;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -537,7 +555,7 @@ class ArchitectureVisualizer:
             gap: 8px;
             background: transparent;
             border: none;
-            color: #cdd6f4;
+            color: #f8f8f2;
             font-size: 12px;
             padding: 6px 10px;
             border-radius: 4px;
@@ -546,15 +564,13 @@ class ArchitectureVisualizer:
             transition: background 0.15s ease, color 0.15s ease;
         }}
         .tree-context-item:hover {{
-            background: rgba(137, 180, 250, 0.2);
-            color: #89b4fa;
+            background: rgba(102, 217, 239, 0.15);
+            color: #66d9ef;
         }}
         .tree-context-item.danger:hover {{
             background: rgba(249, 38, 114, 0.2);
             color: #f92672;
         }}
-
-
 
         /* Inspector Details */
         #inspector-content {{
@@ -563,20 +579,20 @@ class ArchitectureVisualizer:
             gap: 10px;
         }}
         .card {{
-            background: #181825;
+            background: #080808;
             padding: 12px;
             border-radius: 6px;
-            border: 1px solid #313244;
+            border: 1px solid #1a1a1a;
         }}
         .card h3 {{
             font-size: 15px;
-            color: #89b4fa;
+            color: #66d9ef;
             margin-bottom: 4px;
             word-break: break-all;
         }}
         .card-doc {{
             font-size: 13px;
-            color: #a6adc8;
+            color: #75715e;
             font-style: italic;
             margin-bottom: 8px;
             line-height: 1.4;
@@ -588,16 +604,16 @@ class ArchitectureVisualizer:
             margin-top: 4px;
         }}
         .metric-box {{
-            background: #1e1e2e;
+            background: #0d0d0d;
             padding: 6px 8px;
             border-radius: 4px;
-            border: 1px solid #313244;
+            border: 1px solid #1f1f1f;
             font-size: 12px;
         }}
         .metric-val {{
             font-size: 17px;
             font-weight: bold;
-            color: #89b4fa;
+            color: #66d9ef;
             margin-top: 2px;
         }}
         .connection-list {{
@@ -613,14 +629,14 @@ class ArchitectureVisualizer:
             padding: 5px 8px;
             font-size: 13px;
             font-weight: 500;
-            background: #1e1e2e;
+            background: #0d0d0d;
             border-radius: 3px;
-            border-left: 2px solid #89b4fa;
+            border-left: 2px solid #66d9ef;
             cursor: pointer;
             word-break: break-all;
         }}
         .conn-item:hover {{
-            background: #313244;
+            background: #181818;
         }}
 
         /* ========================================================
@@ -701,11 +717,43 @@ class ArchitectureVisualizer:
             outline: none;
             resize: none;
             tab-size: 4;
-            white-space: pre;
-            overflow-wrap: normal;
-            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            overflow-x: hidden;
             box-sizing: border-box;
             display: none;
+        }}
+
+        /* CodeMirror Monokai OLED (Edição em Tempo Real com Sintaxe e Word-Wrap) */
+        .CodeMirror {{
+            height: 100% !important;
+            background-color: #000000 !important;
+            font-family: "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace !important;
+            font-size: 14.5px !important;
+            line-height: 1.6 !important;
+            color: #f8f8f2 !important;
+        }}
+        .CodeMirror-gutters {{
+            background-color: #000000 !important;
+            border-right: 1px solid #1a1a1a !important;
+            color: #75715e !important;
+        }}
+        .CodeMirror-linenumber {{
+            color: #75715e !important;
+            padding-right: 12px !important;
+        }}
+        .CodeMirror-cursor {{
+            border-left: 2px solid #66d9ef !important;
+        }}
+        .cm-s-monokai.CodeMirror {{
+            background: #000000 !important;
+        }}
+        .CodeMirror-selected {{
+            background: rgba(255, 255, 255, 0.15) !important;
+        }}
+        .CodeMirror-line {{
+            padding-left: 10px !important;
         }}
 
         /* Toast Notificação Moderna e Não Bloqueante */
@@ -713,14 +761,14 @@ class ArchitectureVisualizer:
             position: fixed;
             bottom: 24px;
             right: 24px;
-            background: #1e1e2e;
-            color: #cdd6f4;
+            background: #0d0d0d;
+            color: #f8f8f2;
             padding: 10px 18px;
             border-radius: 6px;
-            border: 1px solid #a6e3a1;
+            border: 1px solid #a6e22e;
             font-size: 13px;
             font-weight: 600;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
             z-index: 999999;
             opacity: 0;
             transform: translateY(12px);
@@ -732,8 +780,8 @@ class ArchitectureVisualizer:
             transform: translateY(0);
         }}
         .graf-toast.error {{
-            border-color: #f38ba8;
-            color: #f38ba8;
+            border-color: #f92672;
+            color: #f92672;
         }}
 
         /* Tabela com Gutter e Código 100% Monokai */
@@ -763,7 +811,8 @@ class ArchitectureVisualizer:
         .sublime-code-cell {{
             padding-left: 14px;
             padding-right: 14px;
-            white-space: pre;
+            white-space: pre-wrap;
+            word-break: break-word;
             background-color: #000000;
         }}
 
@@ -808,18 +857,90 @@ class ArchitectureVisualizer:
         #network {{
             flex: 1;
             height: 100%;
-            background-color: #11111b;
+            background-color: #000000;
         }}
         
         /* Footer status */
         .sidebar-footer {{
             padding: 6px 16px;
-            border-top: 1px solid rgba(69, 71, 90, 0.25);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
             font-size: 11px;
-            color: #6c7086;
+            color: #75715e;
             display: flex;
             justify-content: space-between;
-            background: #11111b;
+            background: #000000;
+        }}
+
+        /* Quick Palette (Sublime Ctrl+P) */
+        .quick-palette-backdrop {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+            z-index: 999999;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 60px;
+        }}
+        .quick-palette-modal {{
+            width: 90%;
+            max-width: 640px;
+            background: #0d0d0d;
+            border: 1px solid #282828;
+            border-radius: 8px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }}
+        .quick-palette-input-wrap {{
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid #1f1f1f;
+            background: #080808;
+        }}
+        .quick-palette-input {{
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #f8f8f2;
+            font-size: 14px;
+            font-family: inherit;
+            margin-left: 8px;
+        }}
+        .quick-palette-results {{
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 4px 0;
+        }}
+        .quick-palette-item {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #f8f8f2;
+            border-left: 3px solid transparent;
+        }}
+        .quick-palette-item:hover, .quick-palette-item.active {{
+            background: rgba(102, 217, 239, 0.12);
+            border-left-color: #66d9ef;
+        }}
+        .quick-palette-footer {{
+            padding: 6px 14px;
+            background: #080808;
+            border-top: 1px solid #1a1a1a;
+            font-size: 11px;
+            color: #75715e;
+            display: flex;
+            gap: 16px;
         }}
     </style>
 </head>
@@ -828,16 +949,19 @@ class ArchitectureVisualizer:
         <!-- Header do Workspace -->
         <div class="workspace-header">
             <div style="display:flex; align-items:center; gap:8px;">
-                <a href="/" class="sublime-btn" style="text-decoration:none; font-weight:700; color:#89b4fa; border-color:#45475a;" title="Ir para a Biblioteca de Projetos">
+                <a href="/" class="sublime-btn" style="text-decoration:none; font-weight:700; color:#66d9ef; border-color:#282828;" title="Ir para a Biblioteca de Projetos">
                     🏛️ GrafLean | ◀ Biblioteca
                 </a>
-                <span class="brand-sub" style="font-size:11px; color:#6c7086;">📁 {project_name}</span>
+                <span class="brand-sub" style="font-size:11px; color:#75715e;">📁 {project_name}</span>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
+                <button class="sublime-btn" id="btn-quick-open" onclick="openQuickPalette()" title="Busca Rápida de Arquivos e Símbolos (Ctrl+P)">
+                    🔍 Arquivos (Ctrl+P)
+                </button>
                 <button class="sublime-btn" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Alternar Visibilidade do Grafo">
                     🌐 Grafo
                 </button>
-                <button class="sublime-btn" id="btn-collapse-stage" onclick="toggleCodeSubpanel()" style="background:#2a283e; border-color:#89b4fa; color:#b4befe; font-weight:bold; padding:4px 10px;" title="Ocultar/Mostrar Editor de Código">
+                <button class="sublime-btn" id="btn-collapse-stage" onclick="toggleCodeSubpanel()" style="background:#141414; border-color:#282828; color:#f8f8f2; font-weight:bold; padding:4px 10px;" title="Ocultar/Mostrar Editor de Código">
                     ◀
                 </button>
             </div>
@@ -866,12 +990,12 @@ class ArchitectureVisualizer:
 
                 <!-- Sub-aba 2: Inspetor de Métricas -->
                 <div class="nav-content-pane" id="nav-pane-inspector" style="display: none;">
-                    <div id="inspector-placeholder" style="color: #6c7086; font-size: 11px; text-align: center; margin-top: 30px;">
+                    <div id="inspector-placeholder" style="color: #75715e; font-size: 11px; text-align: center; margin-top: 30px;">
                         👈 Clique em qualquer arquivo ou símbolo na árvore ou no grafo para inspecionar métricas e conexões.
                     </div>
                     <div id="inspector-content" style="display: none;">
                         <div class="card">
-                            <b style="font-size: 11px; color: #cdd6f4;">⚖️ Métricas de Arquitetura Limpa:</b>
+                            <b style="font-size: 11px; color: #f8f8f2;">⚖️ Métricas de Arquitetura Limpa:</b>
                             <div class="metric-grid">
                                 <div class="metric-box">
                                     <div>Acoplamento Aferente (Ca)</div>
@@ -883,17 +1007,17 @@ class ArchitectureVisualizer:
                                 </div>
                             </div>
                             <div style="margin-top: 6px; font-size: 11px;">
-                                Instabilidade (I): <b id="det-inst" style="color: #fab387;">0.0</b>
+                                Instabilidade (I): <b id="det-inst" style="color: #fd971f;">0.0</b>
                             </div>
                         </div>
 
                         <div class="card">
-                            <b style="font-size: 11px; color: #a6e3a1;">📥 Chamado por (Inbound):</b>
+                            <b style="font-size: 11px; color: #a6e22e;">📥 Chamado por (Inbound):</b>
                             <div class="connection-list" id="det-inbound"></div>
                         </div>
 
                         <div class="card">
-                            <b style="font-size: 11px; color: #fab387;">📤 Depende de (Outbound):</b>
+                            <b style="font-size: 11px; color: #fd971f;">📤 Depende de (Outbound):</b>
                             <div class="connection-list" id="det-outbound"></div>
                         </div>
                     </div>
@@ -914,7 +1038,7 @@ class ArchitectureVisualizer:
                         </div>
                         <div class="sublime-toolbar-actions">
                             <button class="sublime-btn" id="btn-toggle-edit" onclick="toggleEditMode()" title="Alternar entre Leitura e Edição">✏️ Editar</button>
-                            <button class="sublime-btn" id="btn-save-code" onclick="saveCurrentCode()" style="display:none; background:#a6e22e; color:#11111b; font-weight:700; border-color:#a6e22e;" title="Salvar Alterações no Disco (Ctrl+S)">💾 Salvar</button>
+                            <button class="sublime-btn" id="btn-save-code" onclick="saveCurrentCode()" style="display:none; background:#a6e22e; color:#000000; font-weight:700; border-color:#a6e22e;" title="Salvar Alterações no Disco (Ctrl+S)">💾 Salvar</button>
                             <button class="sublime-btn" onclick="copyCurrentCode()" title="Copiar Código">📋 Copiar</button>
                         </div>
                     </div>
@@ -946,17 +1070,17 @@ class ArchitectureVisualizer:
     <!-- Divisor Arrastável Externo com o Mouse (Sidebar vs Grafo) -->
     <div id="resizer" title="Arraste com o mouse para redimensionar a barra lateral"></div>
 
-    <button id="sidebar-reopen-btn" class="sublime-btn" onclick="toggleSidebar()" style="display:none; position:absolute; top:12px; left:12px; z-index:150; height:31px; padding:6px 11px; font-weight:bold; background:#1e1e2e; border:1px solid #45475a; color:#89b4fa;" title="Reabrir Barra Lateral">▶</button>
+    <button id="sidebar-reopen-btn" class="sublime-btn" onclick="toggleSidebar()" style="display:none; position:absolute; top:12px; left:12px; z-index:150; height:31px; padding:6px 11px; font-weight:bold; background:#141414; border:1px solid #282828; color:#66d9ef;" title="Reabrir Barra Lateral">▶</button>
 
     <div id="network-container" style="flex:1; position:relative; height:100%; width:100%;">
         <!-- Barra de Ferramentas Flutuante do Grafo -->
-        <div id="graph-toolbar" style="position:absolute; top:12px; left:16px; z-index:90; display:flex; gap:6px; background:rgba(22,23,27,0.85); backdrop-filter:blur(8px); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center;">
+        <div id="graph-toolbar" style="position:absolute; top:12px; left:16px; z-index:90; display:flex; gap:6px; background:rgba(10,10,10,0.85); backdrop-filter:blur(8px); padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); align-items:center;">
             <button class="sublime-btn" id="btn-collapse-graph" onclick="toggleGraphPanel()" title="Recolher Grafo (Modo Código Tela Cheia)">▶ Ocultar Grafo</button>
             <select id="select-graph-depth" onchange="setGraphDepth(this.value)" class="sublime-btn" style="background:#141414; color:#f8f8f2; border:1px solid #282828; padding:3px 8px; font-size:11px; border-radius:4px; cursor:pointer; outline:none;" title="Profundidade de Conexões do Grafo">
                 <option value="1" selected>🎯 Fase 1 (Direto)</option>
                 <option value="2">🌐 Fase 2 (Transitivo)</option>
             </select>
-            <span id="graph-nodes-count" style="font-size:11px; color:#a6adc8; align-self:center; margin-left:6px; font-weight:600;">-- nós</span>
+            <span id="graph-nodes-count" style="font-size:11px; color:#75715e; align-self:center; margin-left:6px; font-weight:600;">-- nós</span>
             <span style="display:flex; align-items:center; gap:4px; font-size:11px; margin-left:8px; color:#66d9ef;">
                 <span style="display:inline-block; width:12px; height:2px; background:#66d9ef;"></span> ➔ Envio
             </span>
@@ -1073,11 +1197,11 @@ class ArchitectureVisualizer:
         }}
 
         const colorMap = {{
-            "class": "#89b4fa",
-            "interface": "#b4befe",
-            "method": "#a6e3a1",
-            "function": "#94e2d5",
-            "file": "#f9e2af"
+            "class": "#66d9ef",
+            "interface": "#ae81ff",
+            "method": "#a6e22e",
+            "function": "#a6e22e",
+            "file": "#e6db74"
         }};
 
         // 1. Vis.js Network Setup com Células Modulares e Física Pacificada
@@ -1113,8 +1237,8 @@ class ArchitectureVisualizer:
                 label: label,
                 title: n.title + (classes.length ? "\\n🏛️ Classes: " + classes.join(", ") : "") + (isFocal ? "\\n🎯 [Elemento em Foco]" : `\\n📍 Distância: ${{distance}}º nível`),
                 color: {{
-                    background: isFocal ? "#272822" : (hasClasses ? "#1e1e2e" : "#261c14"),
-                    border: isFocal ? "#a6e22e" : (n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (hasClasses ? "#89b4fa" : "#fab387")))
+                    background: isFocal ? "#272822" : (hasClasses ? "#141414" : "#1a1a1a"),
+                    border: isFocal ? "#a6e22e" : (n.git === "new" ? "#a6e22e" : (n.git === "modified" ? "#fd971f" : (hasClasses ? "#66d9ef" : "#fd971f")))
                 }},
                 borderWidth: isFocal ? 4 : ((n.git === "new" || n.git === "modified") ? 2.5 : 2),
                 shape: "dot",
@@ -1123,7 +1247,7 @@ class ArchitectureVisualizer:
                     borderDashes: false
                 }},
                 font: {{
-                    color: isFocal ? "#a6e22e" : (hasClasses ? "#cdd6f4" : "#fab387"),
+                    color: isFocal ? "#a6e22e" : (hasClasses ? "#f8f8f2" : "#fd971f"),
                     size: isFocal ? 12 : 10,
                     bold: true,
                     vadjust: 0
@@ -1205,14 +1329,14 @@ class ArchitectureVisualizer:
                     const isOutboundFromFocus = (src === focalGId);
                     const isInboundToFocus = (tgt === focalGId);
 
-                    let edgeColor = "rgba(108, 112, 134, 0.4)";
-                    let highlightColor = "#89b4fa";
+                    let edgeColor = "rgba(117, 113, 94, 0.4)";
+                    let highlightColor = "#66d9ef";
                     if (isOutboundFromFocus) {{
-                        edgeColor = "#66d9ef"; // Azul: Envio
-                        highlightColor = "#89b4fa";
+                        edgeColor = "#66d9ef"; // Ciano: Envio
+                        highlightColor = "#66d9ef";
                     }} else if (isInboundToFocus) {{
-                        edgeColor = "#fd971f"; // Laranja: Recebe
-                        highlightColor = "#fab387";
+                        edgeColor = "#fd971f"; // Âmbar: Recebe
+                        highlightColor = "#fd971f";
                     }}
 
                     if (!edgeAggregator.has(key)) {{
@@ -1482,7 +1606,7 @@ class ArchitectureVisualizer:
                 inboundList.innerHTML = '';
                 const callers = rawEdges.filter(e => e.target === nodeId);
                 if (callers.length === 0) {{
-                    inboundList.innerHTML = '<span style="color:#6c7086;font-size:12px;">Nenhum chamador direto.</span>';
+                    inboundList.innerHTML = '<span style="color:#75715e;font-size:12px;">Nenhum chamador direto.</span>';
                 }} else {{
                     callers.forEach(c => {{
                         const item = document.createElement('div');
@@ -1499,7 +1623,7 @@ class ArchitectureVisualizer:
                 outboundList.innerHTML = '';
                 const callees = rawEdges.filter(e => e.source === nodeId);
                 if (callees.length === 0) {{
-                    outboundList.innerHTML = '<span style="color:#6c7086;font-size:12px;">Nenhuma dependência externa direta.</span>';
+                    outboundList.innerHTML = '<span style="color:#75715e;font-size:12px;">Nenhuma dependência externa direta.</span>';
                 }} else {{
                     callees.forEach(c => {{
                         const item = document.createElement('div');
@@ -1533,7 +1657,7 @@ class ArchitectureVisualizer:
                 // Lazy Loading: busca do cache local ou via API sob demanda
                 let source = rawFileSources[filePath];
                 if (source === undefined) {{
-                    container.innerHTML = `<div style="padding: 20px; color: #89b4fa; font-family: monospace;">⚡ Carregando ${{fileName}} sob demanda...</div>`;
+                    container.innerHTML = `<div style="padding: 20px; color: #66d9ef; font-family: monospace;">⚡ Carregando ${{fileName}} sob demanda...</div>`;
                     try {{
                         let res = await fetch(`/api/file-content?path=${{encodeURIComponent(filePath)}}`);
                         if (!res.ok) {{
@@ -1554,11 +1678,15 @@ class ArchitectureVisualizer:
                 }}
 
                 if (source === undefined) {{
-                    container.innerHTML = '<div style="padding: 20px; color: #f38ba8;">// Arquivo não pôde ser carregado.</div>';
+                    container.innerHTML = '<div style="padding: 20px; color: #f92672;">// Arquivo não pôde ser carregado.</div>';
                     if (textarea) textarea.value = '';
                     return;
                 }}
                 if (textarea) textarea.value = source;
+                if (cmEditorInstance && isEditMode) {{
+                    cmEditorInstance.setOption('mode', getCodeMirrorMode(filePath));
+                    cmEditorInstance.setValue(source);
+                }}
 
                 let lang = 'python';
                 let langLabel = 'Python';
@@ -1568,7 +1696,11 @@ class ArchitectureVisualizer:
                 else if (filePath.endsWith('.html') || filePath.endsWith('.blade.php')) {{ lang = 'html'; langLabel = 'HTML / Blade'; }}
                 else if (filePath.endsWith('.md')) {{ lang = 'markdown'; langLabel = 'Markdown'; }}
                 else if (filePath.endsWith('.json')) {{ lang = 'json'; langLabel = 'JSON'; }}
-                else if (filePath.endsWith('.css')) {{ lang = 'css'; langLabel = 'CSS'; }}
+                else if (filePath.endsWith('.css') || filePath.endsWith('.scss')) {{ lang = 'css'; langLabel = 'CSS'; }}
+                else if (filePath.endsWith('.yaml') || filePath.endsWith('.yml')) {{ lang = 'yaml'; langLabel = 'YAML'; }}
+                else if (filePath.endsWith('.sh') || filePath.endsWith('.bash') || filePath.endsWith('.zsh')) {{ lang = 'bash'; langLabel = 'Shell Script'; }}
+                else if (filePath.endsWith('.sql')) {{ lang = 'sql'; langLabel = 'SQL'; }}
+                else if (filePath.endsWith('.xml') || filePath.endsWith('.svg')) {{ lang = 'xml'; langLabel = 'XML'; }}
 
                 statusPos.innerText = `Line ${{targetLine || 1}}, Column 1`;
                 statusLang.innerText = isEditMode ? `UTF-8 | ${{langLabel}} (Modo Edição • Ctrl+S para Salvar)` : `UTF-8 | ${{langLabel}}`;
@@ -1630,6 +1762,45 @@ class ArchitectureVisualizer:
             }}
         }}
 
+        // Resolução de Ícones Temáticos por Extensão e Tipo de Pasta
+        function getFileIcon(fileName) {{
+            const lower = fileName.toLowerCase();
+            if (lower === '.gitignore' || lower === '.gitattributes') return {{ icon: '📙', color: '#fd971f' }};
+            if (lower.startsWith('.env')) return {{ icon: '🔒', color: '#e6db74' }};
+            if (lower === '.editorconfig') return {{ icon: '⚙️', color: '#a6e22e' }};
+            if (lower === '.htaccess') return {{ icon: '🛡️', color: '#ae81ff' }};
+            if (lower === 'artisan') return {{ icon: '⚡', color: '#f92672' }};
+            if (lower.startsWith('composer')) return {{ icon: '🎼', color: '#66d9ef' }};
+            if (lower === 'package.json' || lower === 'package-lock.json') return {{ icon: '📦', color: '#f92672' }};
+            if (lower.endsWith('.php') || lower.endsWith('.blade.php')) return {{ icon: '🐘', color: '#8892be' }};
+            if (lower.endsWith('.py')) return {{ icon: '🐍', color: '#66d9ef' }};
+            if (lower.endsWith('.js') || lower.endsWith('.jsx')) return {{ icon: '🟨', color: '#e6db74' }};
+            if (lower.endsWith('.ts') || lower.endsWith('.tsx')) return {{ icon: '🟦', color: '#66d9ef' }};
+            if (lower.endsWith('.html')) return {{ icon: '🌐', color: '#fd971f' }};
+            if (lower.endsWith('.css') || lower.endsWith('.scss')) return {{ icon: '🎨', color: '#66d9ef' }};
+            if (lower.endsWith('.json')) return {{ icon: '📋', color: '#e6db74' }};
+            if (lower.endsWith('.yaml') || lower.endsWith('.yml')) return {{ icon: '📑', color: '#f92672' }};
+            if (lower.endsWith('.md')) return {{ icon: 'Ⓜ️', color: '#66d9ef' }};
+            if (lower.endsWith('.sh') || lower.endsWith('.bash') || lower.endsWith('.zsh')) return {{ icon: '🐚', color: '#a6e22e' }};
+            if (lower.endsWith('.sql')) return {{ icon: '🗄️', color: '#e6db74' }};
+            if (lower.endsWith('.xml')) return {{ icon: '📰', color: '#fd971f' }};
+            if (lower.endsWith('.lock')) return {{ icon: '🔒', color: '#75715e' }};
+            return {{ icon: '📄', color: '#f8f8f2' }};
+        }}
+
+        function getFolderIcon(folderName, isOpen) {{
+            const lower = folderName.toLowerCase();
+            if (lower === '.idea' || lower === '.vscode') return '💡';
+            if (lower === 'tests' || lower === 'test') return '🧪';
+            if (lower === 'doc' || lower === 'docs' || lower === 'docs-internas') return '📚';
+            if (lower === 'app' || lower === 'src' || lower === 'core') return '📦';
+            if (lower === 'database') return '🗄️';
+            if (lower === 'config') return '⚙️';
+            if (lower === 'public') return '🌐';
+            if (lower === 'storage') return '💾';
+            return isOpen ? '📂' : '📁';
+        }}
+
         // 4. Renderização da Árvore (Composite Pattern)
         function renderTree(comp, parentEl) {{
             if (comp.type === 'directory') {{
@@ -1640,13 +1811,21 @@ class ArchitectureVisualizer:
 
                 const row = document.createElement('div');
                 row.className = 'tree-row';
+
+                const arrow = document.createElement('span');
+                arrow.className = 'tree-arrow' + (isOpen ? ' open' : '');
+                arrow.innerText = '▶';
+
+                const icon = document.createElement('span');
+                icon.innerText = getFolderIcon(comp.name, isOpen);
+
                 row.onclick = (e) => {{
                     e.stopPropagation();
                     const childrenEl = dirDiv.querySelector('.tree-children');
-                    const arrow = row.querySelector('.tree-arrow');
                     if (childrenEl) {{
                         const opened = childrenEl.classList.toggle('open');
                         arrow.classList.toggle('open');
+                        icon.innerText = getFolderIcon(comp.name, opened);
                         if (opened) {{
                             openFolders.add(comp.relative_path);
                         }} else {{
@@ -1657,13 +1836,6 @@ class ArchitectureVisualizer:
                         }} catch (err) {{}}
                     }}
                 }};
-
-                const arrow = document.createElement('span');
-                arrow.className = 'tree-arrow' + (isOpen ? ' open' : '');
-                arrow.innerText = '▶';
-
-                const icon = document.createElement('span');
-                icon.innerText = '📁';
 
                 const name = document.createElement('span');
                 name.innerText = comp.name;
@@ -1705,8 +1877,10 @@ class ArchitectureVisualizer:
                 const spacer = document.createElement('span');
                 spacer.style.width = '10px';
 
+                const fileInfo = getFileIcon(comp.name);
                 const icon = document.createElement('span');
-                icon.innerText = '📄';
+                icon.innerText = fileInfo.icon;
+                icon.title = comp.name;
 
                 const name = document.createElement('span');
                 name.className = 'tree-file-name';
@@ -2025,6 +2199,25 @@ class ArchitectureVisualizer:
             }});
         }}
 
+        let cmEditorInstance = null;
+
+        function getCodeMirrorMode(filePath) {{
+            if (!filePath) return 'null';
+            const lower = filePath.toLowerCase();
+            if (lower.endsWith('.php') || lower.endsWith('.blade.php')) return 'application/x-httpd-php';
+            if (lower.endsWith('.py')) return 'python';
+            if (lower.endsWith('.js') || lower.endsWith('.jsx')) return 'javascript';
+            if (lower.endsWith('.ts') || lower.endsWith('.tsx')) return 'text/typescript';
+            if (lower.endsWith('.html')) return 'htmlmixed';
+            if (lower.endsWith('.css') || lower.endsWith('.scss')) return 'css';
+            if (lower.endsWith('.json')) return 'application/json';
+            if (lower.endsWith('.yaml') || lower.endsWith('.yml')) return 'yaml';
+            if (lower.endsWith('.sh') || lower.endsWith('.bash') || lower.endsWith('.zsh')) return 'shell';
+            if (lower.endsWith('.md')) return 'markdown';
+            if (lower.endsWith('.xml') || lower.endsWith('.svg')) return 'xml';
+            return 'null';
+        }}
+
         function toggleEditMode(forceState) {{
             if (!currentLoadedFilePath) {{
                 showToast('⚠️ Selecione um arquivo na árvore lateral antes de editar.', 'error');
@@ -2044,15 +2237,48 @@ class ArchitectureVisualizer:
 
             if (isEditMode) {{
                 tableContainer.style.display = 'none';
-                textarea.style.display = 'block';
-                textarea.value = rawFileSources[currentLoadedFilePath] || '';
+                const source = rawFileSources[currentLoadedFilePath] || '';
+
+                if (window.CodeMirror) {{
+                    textarea.style.display = 'none';
+                    if (!cmEditorInstance) {{
+                        cmEditorInstance = CodeMirror.fromTextArea(textarea, {{
+                            mode: getCodeMirrorMode(currentLoadedFilePath),
+                            theme: 'monokai',
+                            lineNumbers: true,
+                            lineWrapping: true,
+                            tabSize: 4,
+                            indentUnit: 4,
+                            extraKeys: {{
+                                "Ctrl-S": function() {{ saveCurrentCode(); }},
+                                "Cmd-S": function() {{ saveCurrentCode(); }}
+                            }}
+                        }});
+                        cmEditorInstance.on('change', () => {{
+                            rawFileSources[currentLoadedFilePath] = cmEditorInstance.getValue();
+                        }});
+                    }}
+                    cmEditorInstance.setOption('mode', getCodeMirrorMode(currentLoadedFilePath));
+                    cmEditorInstance.setValue(source);
+                    cmEditorInstance.getWrapperElement().style.display = 'block';
+                    setTimeout(() => cmEditorInstance.refresh(), 30);
+                    cmEditorInstance.focus();
+                }} else {{
+                    textarea.style.display = 'block';
+                    textarea.value = source;
+                    textarea.focus();
+                }}
+
                 btnEdit.innerHTML = '👁️ Visualizar';
                 btnEdit.style.background = '#fd971f';
-                btnEdit.style.color = '#111';
+                btnEdit.style.color = '#000000';
                 btnSave.style.display = 'inline-flex';
                 statusLang.innerText = `${{statusLang.innerText.split('(')[0].trim()}} (Modo Edição • Ctrl+S para Salvar)`;
-                textarea.focus();
             }} else {{
+                if (cmEditorInstance) {{
+                    cmEditorInstance.getWrapperElement().style.display = 'none';
+                    rawFileSources[currentLoadedFilePath] = cmEditorInstance.getValue();
+                }}
                 textarea.style.display = 'none';
                 tableContainer.style.display = 'block';
                 btnEdit.innerHTML = '✏️ Editar';
@@ -2065,8 +2291,9 @@ class ArchitectureVisualizer:
 
         async function saveCurrentCode() {{
             if (!currentLoadedFilePath) return;
-            const textarea = document.getElementById('sublime-editor-textarea');
-            const content = textarea.value;
+            const content = (cmEditorInstance && isEditMode) 
+                ? cmEditorInstance.getValue() 
+                : document.getElementById('sublime-editor-textarea').value;
             const btnSave = document.getElementById('btn-save-code');
             const originalText = btnSave.innerHTML;
             btnSave.innerHTML = '⏳ Salvando...';
@@ -2327,7 +2554,159 @@ class ArchitectureVisualizer:
 
             await executeBackendApi('/api/delete', {{ path: relPath }}, `🗑️ "${{currentName}}" foi excluído com sucesso!`);
         }}
+
+        // ==========================================
+        // Quick Palette (Busca Rápida Estilo Ctrl+P)
+        // ==========================================
+        let quickPaletteActiveIndex = 0;
+        let quickPaletteFilteredItems = [];
+
+        function getAllIndexableItems() {{
+            const items = [];
+            function traverse(node) {{
+                if (!node) return;
+                if (node.type === 'file' || node.type === 'code' || node.type === 'doc') {{
+                    items.push({{
+                        name: node.name,
+                        path: node.path,
+                        isSymbol: false,
+                        icon: typeof getFileIcon === 'function' ? getFileIcon(node.name) : '📄'
+                    }});
+                }}
+                if (node.children) {{
+                    node.children.forEach(traverse);
+                }}
+            }}
+            if (typeof rawTree !== 'undefined' && rawTree) traverse(rawTree);
+
+            // Indexa símbolos do grafo (classes e funções)
+            if (typeof rawNodes !== 'undefined' && Array.isArray(rawNodes)) {{
+                rawNodes.forEach(n => {{
+                    if (n.type === 'class' || n.type === 'function' || n.type === 'method') {{
+                        items.push({{
+                            name: n.label,
+                            path: n.parentId || n.id,
+                            symbolId: n.id,
+                            isSymbol: true,
+                            symbolType: n.type,
+                            icon: n.type === 'class' ? '🔷' : '⚡'
+                        }});
+                    }}
+                }});
+            }}
+            return items;
+        }}
+
+        function openQuickPalette() {{
+            const backdrop = document.getElementById('quick-palette-backdrop');
+            const input = document.getElementById('quick-palette-input');
+            if (!backdrop || !input) return;
+            backdrop.style.display = 'flex';
+            input.value = '';
+            input.focus();
+            onQuickPaletteInput('');
+        }}
+
+        function closeQuickPalette() {{
+            const backdrop = document.getElementById('quick-palette-backdrop');
+            if (backdrop) backdrop.style.display = 'none';
+        }}
+
+        function onQuickPaletteInput(query) {{
+            const q = query.trim().toLowerCase();
+            const allItems = getAllIndexableItems();
+            if (!q) {{
+                quickPaletteFilteredItems = allItems.slice(0, 30);
+            }} else {{
+                quickPaletteFilteredItems = allItems.filter(item => {{
+                    return item.name.toLowerCase().includes(q) || item.path.toLowerCase().includes(q);
+                }}).slice(0, 40);
+            }}
+            quickPaletteActiveIndex = 0;
+            renderQuickPalette();
+        }}
+
+        function renderQuickPalette() {{
+            const container = document.getElementById('quick-palette-results');
+            if (!container) return;
+            if (quickPaletteFilteredItems.length === 0) {{
+                container.innerHTML = '<div style="padding:16px; text-align:center; color:#75715e; font-size:12px;">Nenhum arquivo ou símbolo encontrado</div>';
+                return;
+            }}
+            container.innerHTML = quickPaletteFilteredItems.map((item, idx) => `
+                <div class="quick-palette-item ${{idx === quickPaletteActiveIndex ? 'active' : ''}}" onclick="selectQuickPaletteItem(${{idx}})">
+                    <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
+                        <span>${{item.icon}}</span>
+                        <span style="font-weight:600; color:${{item.isSymbol ? '#66d9ef' : '#f8f8f2'}};">${{item.name}}</span>
+                        <span style="color:#75715e; font-size:11px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${{item.path}}</span>
+                    </div>
+                    <span style="font-size:10px; color:#75715e; background:#181818; padding:2px 6px; border-radius:4px; border:1px solid #282828;">${{item.isSymbol ? item.symbolType : 'arquivo'}}</span>
+                </div>
+            `).join('');
+            const activeEl = container.children[quickPaletteActiveIndex];
+            if (activeEl) activeEl.scrollIntoView({{ block: 'nearest' }});
+        }}
+
+        function onQuickPaletteKeyDown(e) {{
+            if (e.key === 'ArrowDown') {{
+                e.preventDefault();
+                if (quickPaletteActiveIndex < quickPaletteFilteredItems.length - 1) {{
+                    quickPaletteActiveIndex++;
+                    renderQuickPalette();
+                }}
+            }} else if (e.key === 'ArrowUp') {{
+                e.preventDefault();
+                if (quickPaletteActiveIndex > 0) {{
+                    quickPaletteActiveIndex--;
+                    renderQuickPalette();
+                }}
+            }} else if (e.key === 'Enter') {{
+                e.preventDefault();
+                selectQuickPaletteItem(quickPaletteActiveIndex);
+            }} else if (e.key === 'Escape') {{
+                e.preventDefault();
+                closeQuickPalette();
+            }}
+        }}
+
+        function selectQuickPaletteItem(idx) {{
+            const item = quickPaletteFilteredItems[idx];
+            if (!item) return;
+            closeQuickPalette();
+            if (item.isSymbol) {{
+                if (item.path && typeof rawFileSources !== 'undefined' && rawFileSources[item.path]) openFile(item.path);
+                if (item.symbolId && typeof focusNode === 'function') focusNode(item.symbolId);
+            }} else {{
+                openFile(item.path);
+            }}
+        }}
+
+        window.addEventListener('keydown', (e) => {{
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {{
+                e.preventDefault();
+                openQuickPalette();
+            }} else if (e.key === 'Escape') {{
+                closeQuickPalette();
+            }}
+        }});
     </script>
+
+    <!-- Modal Quick Palette (Ctrl+P) -->
+    <div id="quick-palette-backdrop" class="quick-palette-backdrop" style="display:none;" onclick="if(event.target===this)closeQuickPalette();">
+        <div class="quick-palette-modal">
+            <div class="quick-palette-input-wrap">
+                <span style="color:#66d9ef; font-size:14px;">🔍</span>
+                <input type="text" id="quick-palette-input" class="quick-palette-input" placeholder="Buscar arquivo ou símbolo... (Ctrl+P)" oninput="onQuickPaletteInput(this.value)" onkeydown="onQuickPaletteKeyDown(event)">
+                <button onclick="closeQuickPalette()" style="background:transparent; border:none; color:#75715e; cursor:pointer; font-size:14px;">✕</button>
+            </div>
+            <div id="quick-palette-results" class="quick-palette-results"></div>
+            <div class="quick-palette-footer">
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↑</kbd> <kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↓</kbd> navegar</span>
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Enter</kbd> abrir</span>
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Esc</kbd> fechar</span>
+            </div>
+        </div>
+    </div>
 
     <!-- Menu Flutuante Contextual para Pastas e Arquivos -->
     <div id="tree-context-menu" class="tree-context-menu" style="display:none;"></div>
