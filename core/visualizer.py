@@ -1009,6 +1009,119 @@ class ArchitectureVisualizer:
             display: flex;
             gap: 16px;
         }}
+
+        /* Find in Files Modal (Sublime Ctrl+Shift+F) */
+        .find-files-backdrop {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(8px);
+            z-index: 999999;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 50px;
+        }}
+        .find-files-modal {{
+            width: 92%;
+            max-width: 780px;
+            background: #0d0d0d;
+            border: 1px solid #282828;
+            border-radius: 8px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }}
+        .find-files-input-wrap {{
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid #1f1f1f;
+            background: #080808;
+            gap: 8px;
+        }}
+        .find-files-input {{
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #f8f8f2;
+            font-size: 14px;
+            font-family: inherit;
+        }}
+        .find-files-toggle {{
+            background: #141414;
+            border: 1px solid #282828;
+            color: #75715e;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 7px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }}
+        .find-files-toggle.active {{
+            background: rgba(102, 217, 239, 0.15);
+            color: #66d9ef;
+            border-color: #66d9ef;
+        }}
+        .find-files-results {{
+            max-height: 420px;
+            overflow-y: auto;
+            padding: 4px 0;
+            font-family: "Fira Code", Consolas, monospace;
+            font-size: 12px;
+        }}
+        .find-file-group {{
+            background: #080808;
+            padding: 6px 14px;
+            border-top: 1px solid #1a1a1a;
+            border-bottom: 1px solid #1a1a1a;
+            color: #66d9ef;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }}
+        .find-result-item {{
+            display: flex;
+            align-items: center;
+            padding: 6px 14px 6px 28px;
+            cursor: pointer;
+            color: #f8f8f2;
+            border-left: 3px solid transparent;
+            gap: 12px;
+            transition: background 0.12s ease;
+        }}
+        .find-result-item:hover, .find-result-item.active {{
+            background: rgba(102, 217, 239, 0.12);
+            border-left-color: #66d9ef;
+        }}
+        .find-line-num {{
+            color: #75715e;
+            min-width: 38px;
+            text-align: right;
+            user-select: none;
+            font-size: 11px;
+        }}
+        .find-snippet {{
+            flex: 1;
+            white-space: pre;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }}
+        .find-highlight {{
+            background: rgba(230, 219, 116, 0.25);
+            color: #e6db74;
+            font-weight: bold;
+            border-radius: 2px;
+            padding: 0 2px;
+        }}
     </style>
 </head>
 <body>
@@ -1022,6 +1135,9 @@ class ArchitectureVisualizer:
                 <span class="brand-sub" style="font-size:11px; color:#75715e;">📁 {project_name}</span>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
+                <button class="sublime-btn" id="btn-find-in-files" onclick="openFindInFiles()" title="Localizar Texto nos Arquivos (Ctrl+Shift+F)">
+                    🔎 Texto (Ctrl+Shift+F)
+                </button>
                 <button class="sublime-btn" id="btn-quick-open" onclick="openQuickPalette()" title="Busca Rápida de Arquivos e Símbolos (Ctrl+P)">
                     🔍 Arquivos (Ctrl+P)
                 </button>
@@ -1048,6 +1164,7 @@ class ArchitectureVisualizer:
                     <div class="search-box">
                         <span class="search-icon">🔍</span>
                         <input type="text" class="search-input" id="search" placeholder="Filtrar arquivos ou classes..." oninput="onSearchInput(this.value)">
+                        <button onclick="openFindInFiles()" title="Buscar texto nos arquivos (Ctrl+Shift+F)" style="background:transparent; border:none; color:#75715e; cursor:pointer; font-size:12px; padding:0 4px;" onmouseover="this.style.color='#66d9ef'" onmouseout="this.style.color='#75715e'">📝</button>
                     </div>
 
 
@@ -2857,12 +2974,175 @@ class ArchitectureVisualizer:
             }}
         }}
 
+        // ==========================================
+        // Find in Files (Busca Global de Conteúdo)
+        // ==========================================
+        let findFilesResults = [];
+        let findFilesActiveIndex = 0;
+        let findFilesCaseSensitive = false;
+        let findFilesDebounceTimer = null;
+
+        function openFindInFiles() {{
+            const backdrop = document.getElementById('find-files-backdrop');
+            const input = document.getElementById('find-files-input');
+            if (!backdrop || !input) return;
+            backdrop.style.display = 'flex';
+            input.focus();
+            input.select();
+            if (input.value.trim()) {{
+                executeFindInFiles(input.value);
+            }}
+        }}
+
+        function closeFindInFiles() {{
+            const backdrop = document.getElementById('find-files-backdrop');
+            if (backdrop) backdrop.style.display = 'none';
+        }}
+
+        function toggleFindCaseSensitive() {{
+            findFilesCaseSensitive = !findFilesCaseSensitive;
+            const btn = document.getElementById('btn-find-case');
+            if (btn) btn.classList.toggle('active', findFilesCaseSensitive);
+            const input = document.getElementById('find-files-input');
+            if (input && input.value.trim()) executeFindInFiles(input.value);
+        }}
+
+        function onFindInFilesInput(query) {{
+            clearTimeout(findFilesDebounceTimer);
+            findFilesDebounceTimer = setTimeout(() => {{
+                executeFindInFiles(query);
+            }}, 180);
+        }}
+
+        async function executeFindInFiles(query) {{
+            const q = (query || '').trim();
+            const resultsContainer = document.getElementById('find-files-results');
+            const countLabel = document.getElementById('find-files-count');
+            if (!q) {{
+                findFilesResults = [];
+                if (resultsContainer) resultsContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#75715e;">Digite um termo para pesquisar em todos os arquivos...</div>';
+                if (countLabel) countLabel.innerText = '';
+                return;
+            }}
+
+            if (resultsContainer) resultsContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#66d9ef;">⚡ Pesquisando nos arquivos do projeto...</div>';
+
+            try {{
+                const res = await fetch('/api/search-content', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ query: q, case_sensitive: findFilesCaseSensitive, max_results: 100 }})
+                }});
+                const json = await res.json();
+                if (json.success && Array.isArray(json.results)) {{
+                    findFilesResults = json.results;
+                    findFilesActiveIndex = 0;
+                    renderFindInFilesResults(q);
+                }} else {{
+                    if (resultsContainer) resultsContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#f92672;">Erro ao executar pesquisa.</div>';
+                }}
+            }} catch (err) {{
+                if (resultsContainer) resultsContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#fd971f;">Servidor local indisponível.</div>';
+            }}
+        }}
+
+        function highlightMatchText(text, query) {{
+            if (!query) return escapeHtml(text);
+            const escapedText = escapeHtml(text);
+            const escapedQuery = escapeHtml(query);
+            const flags = findFilesCaseSensitive ? 'g' : 'gi';
+            const regex = new RegExp(`(${{escapedQuery.replace(/[.*+?^${{}}()|[\\]\\\\]/g, '\\\\$&')}})`, flags);
+            return escapedText.replace(regex, '<span class="find-highlight">$1</span>');
+        }}
+
+        function renderFindInFilesResults(query) {{
+            const container = document.getElementById('find-files-results');
+            const countLabel = document.getElementById('find-files-count');
+            if (!container) return;
+
+            if (findFilesResults.length === 0) {{
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#75715e;">Nenhum resultado encontrado para "' + escapeHtml(query) + '"</div>';
+                if (countLabel) countLabel.innerText = '0 ocorrências';
+                return;
+            }}
+
+            if (countLabel) countLabel.innerText = `${{findFilesResults.length}} ocorrências`;
+
+            // Agrupa por arquivo
+            const grouped = new Map();
+            findFilesResults.forEach((r, idx) => {{
+                if (!grouped.has(r.file)) grouped.set(r.file, []);
+                grouped.get(r.file).push({{ ...r, globalIndex: idx }});
+            }});
+
+            let html = '';
+            grouped.forEach((items, filePath) => {{
+                const fileName = filePath.split('/').pop();
+                const iconInfo = typeof getFileIcon === 'function' ? getFileIcon(fileName) : {{ icon: '📄' }};
+                html += `
+                    <div class="find-file-group">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span>${{iconInfo.icon}}</span>
+                            <span>${{filePath}}</span>
+                        </div>
+                        <span style="font-size:10px; color:#75715e; font-weight:normal;">${{items.length}} matches</span>
+                    </div>
+                `;
+                items.forEach(item => {{
+                    const isActive = item.globalIndex === findFilesActiveIndex;
+                    html += `
+                        <div class="find-result-item ${{isActive ? 'active' : ''}}" onclick="selectFindInFilesItem(${{item.globalIndex}})">
+                            <span class="find-line-num">L${{item.line}}</span>
+                            <span class="find-snippet">${{highlightMatchText(item.snippet, query)}}</span>
+                        </div>
+                    `;
+                }});
+            }});
+
+            container.innerHTML = html;
+            const activeEl = container.querySelector('.find-result-item.active');
+            if (activeEl) activeEl.scrollIntoView({{ block: 'nearest' }});
+        }}
+
+        function onFindInFilesKeyDown(e) {{
+            if (e.key === 'ArrowDown') {{
+                e.preventDefault();
+                if (findFilesActiveIndex < findFilesResults.length - 1) {{
+                    findFilesActiveIndex++;
+                    renderFindInFilesResults(document.getElementById('find-files-input').value);
+                }}
+            }} else if (e.key === 'ArrowUp') {{
+                e.preventDefault();
+                if (findFilesActiveIndex > 0) {{
+                    findFilesActiveIndex--;
+                    renderFindInFilesResults(document.getElementById('find-files-input').value);
+                }}
+            }} else if (e.key === 'Enter') {{
+                e.preventDefault();
+                selectFindInFilesItem(findFilesActiveIndex);
+            }} else if (e.key === 'Escape') {{
+                e.preventDefault();
+                closeFindInFiles();
+            }}
+        }}
+
+        function selectFindInFilesItem(idx) {{
+            const item = findFilesResults[idx];
+            if (!item) return;
+            closeFindInFiles();
+            Mediator.loadCode(item.file, item.line);
+        }}
+
         window.addEventListener('keydown', (e) => {{
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {{
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {{
+                e.preventDefault();
+                openFindInFiles();
+            }} else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {{
                 e.preventDefault();
                 openQuickPalette();
             }} else if (e.key === 'Escape') {{
                 closeQuickPalette();
+                closeFindInFiles();
             }} else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {{
                 if (currentLoadedFilePath) {{
                     e.preventDefault();
@@ -2887,6 +3167,27 @@ class ArchitectureVisualizer:
             <div class="quick-palette-footer">
                 <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↑</kbd> <kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↓</kbd> navegar</span>
                 <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Enter</kbd> abrir</span>
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Esc</kbd> fechar</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Find in Files (Ctrl+Shift+F) -->
+    <div id="find-files-backdrop" class="find-files-backdrop" style="display:none;" onclick="if(event.target===this)closeFindInFiles();">
+        <div class="find-files-modal">
+            <div class="find-files-input-wrap">
+                <span style="color:#66d9ef; font-size:14px;">🔎</span>
+                <input type="text" id="find-files-input" class="find-files-input" placeholder="Buscar texto em todos os arquivos do projeto... (Ctrl+Shift+F)" oninput="onFindInFilesInput(this.value)" onkeydown="onFindInFilesKeyDown(event)">
+                <button id="btn-find-case" class="find-files-toggle" onclick="toggleFindCaseSensitive()" title="Diferenciar maiúsculas/minúsculas (Match Case)">Aa</button>
+                <span id="find-files-count" style="font-size:11px; color:#75715e; white-space:nowrap;"></span>
+                <button onclick="closeFindInFiles()" style="background:transparent; border:none; color:#75715e; cursor:pointer; font-size:14px;">✕</button>
+            </div>
+            <div id="find-files-results" class="find-files-results">
+                <div style="padding:20px; text-align:center; color:#75715e;">Digite um termo para pesquisar em todos os arquivos...</div>
+            </div>
+            <div class="quick-palette-footer">
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↑</kbd> <kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↓</kbd> navegar</span>
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Enter</kbd> abrir na linha</span>
                 <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Esc</kbd> fechar</span>
             </div>
         </div>

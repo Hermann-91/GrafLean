@@ -183,6 +183,58 @@ class ProjectSession:
             "edges": edges_data
         }
 
+    def search_project_content(self, query: str, max_results: int = 80, case_sensitive: bool = False) -> List[Dict[str, Any]]:
+        """Realiza busca textual ultra-rápida (estilo ripgrep/Sublime) no conteúdo dos arquivos do projeto."""
+        results = []
+        if not query or not os.path.isdir(self.project.path):
+            return results
+
+        target_query = query if case_sensitive else query.lower()
+        TEXT_EXTS = {
+            ".php", ".py", ".js", ".ts", ".jsx", ".tsx", ".html", ".css", ".scss",
+            ".json", ".md", ".yaml", ".yml", ".sh", ".bash", ".sql", ".xml", ".svg",
+            ".blade.php", ".env", ".gitignore", ".editorconfig", ".txt"
+        }
+        IGNORE_SEARCH_DIRS = {
+            ".git", "node_modules", "vendor", "__pycache__", ".venv",
+            "storage", "dist", "build", ".cache", ".graflean"
+        }
+        proj_path = os.path.abspath(self.project.path)
+
+        for root, dirs, files in os.walk(proj_path):
+            dirs[:] = [d for d in dirs if d not in IGNORE_SEARCH_DIRS and not d.startswith(".git")]
+            for file in files:
+                if file in ("arch_map.html", ".arch_graph.json", "graph.json"):
+                    continue
+                if file.startswith(".") and file not in (".env", ".gitignore", ".editorconfig"):
+                    continue
+                if not any(file.endswith(ext) for ext in TEXT_EXTS) and not file.startswith("."):
+                    continue
+
+                full_path = os.path.join(root, file)
+                rel_path = os.path.relpath(full_path, proj_path)
+                try:
+                    if os.path.getsize(full_path) > 2 * 1024 * 1024:
+                        continue
+                    with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+                        for line_num, line in enumerate(f, start=1):
+                            line_to_check = line if case_sensitive else line.lower()
+                            if target_query in line_to_check:
+                                snippet = line.strip()
+                                if len(snippet) > 200:
+                                    snippet = snippet[:200] + "..."
+                                results.append({
+                                    "file": rel_path,
+                                    "line": line_num,
+                                    "snippet": snippet,
+                                    "match": query
+                                })
+                                if len(results) >= max_results:
+                                    return results
+                except Exception:
+                    continue
+        return results
+
 
 class HubManager:
     """Gerencia as sessões em memória e sincronização em background da biblioteca."""
@@ -532,6 +584,19 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(200, {"success": True, "message": "Arquivo salvo com sucesso!"})
             except Exception as e:
                 self._send_json(500, {"success": False, "error": str(e)})
+            return
+
+        if path == "/api/search-content":
+            query = payload.get("query", "").strip()
+            case_sensitive = payload.get("case_sensitive", False)
+            max_results = min(int(payload.get("max_results", 80)), 200)
+
+            if not query:
+                self._send_json(200, {"success": True, "results": []})
+                return
+
+            results = session.search_project_content(query, max_results=max_results, case_sensitive=case_sensitive)
+            self._send_json(200, {"success": True, "results": results})
             return
 
         if path == "/api/file-content":
