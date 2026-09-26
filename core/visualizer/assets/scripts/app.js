@@ -676,11 +676,23 @@
         };
 
         function updateChangeSummaryStats() {
-            let nNew = 0, nMod = 0, nDel = 0;
+            const filesMap = new Map();
             allNodesMap.forEach(n => {
-                if (n.git === 'new' || aiTaskStates[n.file] === 'creating') nNew++;
-                else if (n.git === 'modified' || aiTaskStates[n.file] === 'editing') nMod++;
-                else if (n.git === 'deleted') nDel++;
+                if (!n.file) return;
+                let status = null;
+                if (n.git === 'new' || aiTaskStates[n.file] === 'creating') status = 'new';
+                else if (n.git === 'modified' || aiTaskStates[n.file] === 'editing') status = 'mod';
+                else if (n.git === 'deleted') status = 'del';
+                if (status && !filesMap.has(n.file)) {
+                    filesMap.set(n.file, { file: n.file, status: status, graphId: resolveToGraphNodeId(n.id) });
+                }
+            });
+
+            let nNew = 0, nMod = 0, nDel = 0;
+            filesMap.forEach(item => {
+                if (item.status === 'new') nNew++;
+                else if (item.status === 'mod') nMod++;
+                else if (item.status === 'del') nDel++;
             });
 
             const statNew = document.getElementById('stat-new');
@@ -697,7 +709,7 @@
                 badge.innerText = total;
                 badge.style.display = total > 0 ? 'inline-block' : 'none';
             }
-            updateChangeMiniMap();
+            updateChangeMiniMap(filesMap);
         }
 
         let isMiniMapExpanded = false;
@@ -709,26 +721,28 @@
             if (btn) btn.classList.toggle('open', isMiniMapExpanded);
         };
 
-        function updateChangeMiniMap() {
+        function updateChangeMiniMap(filesMap) {
+            if (!filesMap) {
+                filesMap = new Map();
+                allNodesMap.forEach(n => {
+                    if (!n.file) return;
+                    let status = null;
+                    if (n.git === 'new' || aiTaskStates[n.file] === 'creating') status = 'new';
+                    else if (n.git === 'modified' || aiTaskStates[n.file] === 'editing') status = 'mod';
+                    else if (n.git === 'deleted') status = 'del';
+                    if (status && !filesMap.has(n.file)) {
+                        filesMap.set(n.file, { file: n.file, status: status, graphId: resolveToGraphNodeId(n.id) });
+                    }
+                });
+            }
             let nNew = 0, nMod = 0, nDel = 0;
-            const changedFiles = [];
-            allNodesMap.forEach(n => {
-                let status = null;
-                if (n.git === 'new' || aiTaskStates[n.file] === 'creating') {
-                    nNew++;
-                    status = 'new';
-                } else if (n.git === 'modified' || aiTaskStates[n.file] === 'editing') {
-                    nMod++;
-                    status = 'mod';
-                } else if (n.git === 'deleted') {
-                    nDel++;
-                    status = 'del';
-                }
-                if (status && n.file) {
-                    changedFiles.push({ node: n, status: status });
-                }
+            const changedFiles = Array.from(filesMap.values());
+            changedFiles.forEach(item => {
+                if (item.status === 'new') nNew++;
+                else if (item.status === 'mod') nMod++;
+                else if (item.status === 'del') nDel++;
             });
-            const total = nNew + nMod + nDel;
+            const total = changedFiles.length;
             const summaryText = document.getElementById('mini-map-summary-text');
             if (summaryText) {
                 summaryText.innerText = `${total} mutações ativas`;
@@ -746,19 +760,19 @@
                 if (barDel) barDel.style.width = `${(nDel / total) * 100}%`;
             }
 
-            // Renderiza lista interativa de arquivos com cores semânticas
+            // Renderiza lista interativa de arquivos com cores semânticas (deduplicada)
             const filesContainer = document.getElementById('mini-map-files-container');
             if (filesContainer) {
                 if (changedFiles.length === 0) {
                     filesContainer.innerHTML = '<div style="color:#75715e; font-size:10px; padding:4px; text-align:center;">Nenhum arquivo modificado</div>';
                 } else {
                     filesContainer.innerHTML = changedFiles.map(item => {
-                        const fileName = item.node.file.split('/').pop();
+                        const fileName = item.file.split('/').pop();
                         const color = item.status === 'new' ? '#a6e22e' : (item.status === 'mod' ? '#fd971f' : '#f92672');
                         const tagText = item.status === 'new' ? 'NEW' : (item.status === 'mod' ? 'MOD' : 'DEL');
-                        const graphId = resolveToGraphNodeId(item.node.id);
+                        const graphId = item.graphId;
                         return `
-                            <div class="mini-map-file-row" onclick="Mediator.loadCode('${item.node.file}', 1); if (network && '${graphId}') { network.focus('${graphId}', { scale: 1.25, animation: { duration: 350 } }); Mediator.inspectOnly('${graphId}'); }" title="${item.node.file} (Clique para abrir e focar)">
+                            <div class="mini-map-file-row" onclick="Mediator.loadCode('${item.file}', 1); if (network && '${graphId}') { network.focus('${graphId}', { scale: 1.25, animation: { duration: 350 } }); Mediator.inspectOnly('${graphId}'); }" title="${item.file} (Clique para abrir e focar)">
                                 <span class="mini-map-file-name">📄 ${fileName}</span>
                                 <span style="color:${color}; font-weight:bold; font-size:9.5px; border:1px solid ${color}44; padding:1px 4px; border-radius:3px;">${tagText}</span>
                             </div>
@@ -1968,20 +1982,19 @@
                         }
                         updateChangeSummaryStats();
                     } else if (eventType === 'git_status') {
-                        const raw = allNodesMap.get(`file://${payload.path}`) || allNodesMap.get(payload.path);
-                        if (raw) {
-                            if (payload.status === 'committed') {
-                                raw.git = '';
-                                if (nodes && nodes.get(raw.id)) {
-                                    nodes.update(formatVisNode(raw));
+                        const targetPath = payload.path;
+                        allNodesMap.forEach(n => {
+                            if (!targetPath || targetPath === 'all' || n.file === targetPath || n.id === targetPath || n.id === `file://${targetPath}`) {
+                                if (payload.status === 'committed') {
+                                    n.git = '';
+                                } else {
+                                    n.git = payload.status;
                                 }
-                            } else {
-                                raw.git = payload.status;
-                                if (nodes && nodes.get(raw.id)) {
-                                    nodes.update(formatVisNode(raw));
+                                if (nodes && nodes.get(n.id)) {
+                                    nodes.update(formatVisNode(n));
                                 }
                             }
-                        }
+                        });
                         updateChangeSummaryStats();
                     }
                 };

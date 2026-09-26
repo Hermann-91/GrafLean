@@ -56,8 +56,37 @@ class ProjectSession:
         self.clients: Set[BaseHTTPRequestHandler] = set()
         self.clients_lock = threading.Lock()
         self.initialized = False
+        self._last_git_mtime: float = 0.0
         self.change_manager = ChangeManager(self.project.path)
         self.change_manager.subscribe(lambda evt: self.notify_clients(evt.event, evt.data))
+
+    def _get_git_mtime(self) -> float:
+        """Verifica mtime de .git/index e .git/HEAD para detectar commits e staging."""
+        git_dir = os.path.join(self.project.path, ".git")
+        if not os.path.isdir(git_dir):
+            return 0.0
+        mtimes = [0.0]
+        for marker in ("index", "HEAD", "refs/heads"):
+            p = os.path.join(git_dir, marker)
+            if os.path.exists(p):
+                try:
+                    mtimes.append(os.path.getmtime(p))
+                except OSError:
+                    pass
+        return max(mtimes)
+
+    def sync_git_nodes(self) -> Dict[str, str]:
+        """Sincroniza o status Git atual de todos os nós em memória com o repositório."""
+        from core.git_tracker import GitTracker
+        try:
+            status_map = GitTracker(self.project.path).get_status_map()
+        except Exception:
+            status_map = {}
+        for n in self.graph.nodes.values():
+            n.git_status = status_map.get(n.file_path, "")
+        self.change_manager.update_git_status(status_map)
+        self._last_git_mtime = self._get_git_mtime()
+        return status_map
 
     def initialize(self) -> None:
         """Carrega ou escaneia o grafo inicial e mapeia os arquivos monitorados."""
@@ -81,6 +110,7 @@ class ProjectSession:
             self.rescan()
 
         self.file_snapshots = self.get_tracked_files()
+        self.sync_git_nodes()
         self.initialized = True
 
     def rescan(self) -> ProjectMetadata:
@@ -89,6 +119,7 @@ class ProjectSession:
         self.library_manager.save_project_graph(self.project.id, self.graph)
         self.visualizer = ArchitectureVisualizer(self.graph)
         self.file_snapshots = self.get_tracked_files()
+        self.sync_git_nodes()
         self.notify_clients("reload")
         return self.project
 
@@ -139,6 +170,7 @@ class ProjectSession:
 
         # Lazy Loading: arquivos são carregados sob demanda via /api/file-content
         file_sources = {}
+        self.sync_git_nodes()
 
         nodes_data = []
         for node in self.graph.nodes.values():
@@ -293,6 +325,11 @@ class HubManager:
 
                 for session in active_sessions:
                     try:
+                        current_git_mtime = session._get_git_mtime()
+                        if current_git_mtime != session._last_git_mtime:
+                            session.sync_git_nodes()
+                            session.notify_clients("reload")
+
                         current = session.get_tracked_files()
                         if len(current) != len(session.file_snapshots) or any(
                             current.get(p) != session.file_snapshots.get(p) for p in current
@@ -438,6 +475,7 @@ class HubRequestHandler(BaseHTTPRequestHandler):
                 self._send_html(404, "<h1>404 — Projeto não encontrado no GrafLean Hub</h1><p><a href='/'>Voltar para a Biblioteca</a></p>")
                 return
 
+            session.sync_git_nodes()
             content = session.visualizer.render_html()
 
             # Injeta botão de retorno para a biblioteca no cabeçalho do Workspace
