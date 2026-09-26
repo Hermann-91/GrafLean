@@ -94,6 +94,9 @@ O **GrafLean** soluciona esse gargalo operando como uma **IDE de raio-X arquitet
 | <kbd>Ctrl</kbd> + <kbd>W</kbd> | **Fechar Aba:** Fecha a aba ativa atual |
 | <kbd>Ctrl</kbd> + <kbd>Tab</kbd> | **Próxima Aba:** Alterna para a próxima aba aberta |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Tab</kbd> | **Aba Anterior:** Alterna para a aba anterior |
+| <kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> | **Perspectivas:** Alterna instantaneamente entre `[ CÓDIGO ]`, `[ IA / GIT ]` e `[ IMPACTO ]` |
+| <kbd>Alt</kbd> + <kbd>N</kbd> / <kbd>Alt</kbd> + <kbd>P</kbd> | **Navegar Alterações:** Salta para a próxima ou anterior alteração ativa |
+| <kbd>Ctrl</kbd> + <kbd>H</kbd> | **Histórico IA:** Abre/fecha a gaveta retrátil de histórico de operações da IA |
 
 ---
 
@@ -146,13 +149,13 @@ graf-lens-new md docs/specs/TASK_CHECKOUT.md --template task
 
 ## 🧪 Suíte de Testes Automatizados
 
-Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (**85 testes automatizados** executando em ~1.2s com 100% de sucesso, incluindo testes de stress com 1.000 e 3.000 nós):
+Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (**91 testes automatizados** executando em ~2.1s com 100% de sucesso, incluindo testes de stress com 1.000 e 3.000 nós):
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
 ```text
-Ran 85 tests in 1.275s
+Ran 91 tests in 2.100s
 OK
 ```
 

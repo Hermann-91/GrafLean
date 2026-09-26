@@ -4,6 +4,43 @@ Todas as alterações relevantes do **GrafLean** são documentadas neste arquivo
 
 ---
 
+## [2.3.0] - 2026-09-26
+
+### 🤖 Experiência IA (Fase E)
+- **Cápsula de Status "AI Working" no Header**:
+  - Badge dinâmico com ponto pulsante neon (`@keyframes ai-pulse`) e exibição do arquivo e ação em execução (`CRIANDO`, `EDITANDO`, `ANALISANDO`).
+  - Transição de conclusão suave (`✅ IA: Concluído`).
+- **Animações Semânticas Locais no Vis.js**:
+  - **Criação de Nós (`node_created`):** Animação fluida de scale-in (tamanho inicial reduzido expandindo suavemente) sem disparar física global.
+  - **Modificação (`node_changed`):** Pulso luminoso âmbar temporário destacando a alteração.
+  - **Exclusão (`node_deleted`):** Dissolução avermelhada suave de 350ms antes da remoção definitiva do dataset.
+  - **Transição Pós-Commit:** Esmaecimento gradual dos anéis de alteração para as cores estruturais do Code Graph.
+- **Histórico de Operações da IA (Timeline & Gaveta de Auditoria)**:
+  - Buffer circular em memória no `ChangeManager` retendo as últimas 50 operações sem risco de vazamento de memória.
+  - Gaveta retrátil no frontend (`ai-history-drawer`) com atalho <kbd>Ctrl</kbd>+<kbd>H</kbd> / <kbd>Cmd</kbd>+<kbd>H</kbd>, exibindo horário, status e links clicáveis para abrir o código no editor e focar no grafo.
+- **Novos Endpoints HTTP**:
+  - `GET /api/ai-history`: Retorna o log cronológico das ações da IA.
+  - `POST /api/ai-history/clear`: Esvazia o histórico sob demanda.
+  - `POST /api/ai-state`: Suporte ao campo opcional `message` com descrição contextual.
+
+### 🎨 Refinamentos, Ergonomia & Acessibilidade (Fase F)
+- **Mini-Map de Alterações na Perspectiva IA / Git**:
+  - Card compacto com barras de proporção semânticas (verde=novos, laranja=modificados, rosa=excluídos) demonstrando o impacto das mutações ativas.
+- **Clustering Semântico por Diretórios**:
+  - Agrupamento em super-nós por pasta/módulo (`📦 Módulos`) para bases massivas com abertura em duplo-clique.
+- **Novos Atalhos de Teclado de Alta Produtividade**:
+  - <kbd>1</kbd>, <kbd>2</kbd>, <kbd>3</kbd>: Alternância imediata entre as perspectivas `[ CÓDIGO ]`, `[ IA / GIT ]` e `[ IMPACTO ]`.
+  - <kbd>Alt</kbd>+<kbd>N</kbd> e <kbd>Alt</kbd>+<kbd>P</kbd>: Navegação sequencial (próxima e anterior) entre arquivos alterados.
+  - <kbd>Ctrl</kbd>+<kbd>H</kbd>: Abertura/fechamento da gaveta de histórico da IA.
+- **Telemetria de FPS & Acessibilidade**:
+  - Monitor leve de taxa de quadros (FPS) no rodapé do workspace.
+  - Respeito integral à preferência de acessibilidade do sistema operacional (`prefers-reduced-motion: reduce`).
+
+### 🧪 Testes Automatizados
+- Expansão da suíte para **91 testes automatizados** com 100% de sucesso em ~2.1s.
+
+---
+
 ## [2.2.0] - 2026-09-26
 
 ### 🚀 Arquitetura & Alta Performance

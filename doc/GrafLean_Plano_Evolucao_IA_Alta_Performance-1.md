@@ -624,57 +624,57 @@ Isso reduz trabalho repetido e ajuda a manter o contexto controlado.
 
 ## Fase A — Fundação
 
-- [ ] Criar Change Manager.
-- [ ] Separar estado IA de estado Git.
-- [ ] Definir modelo de eventos.
-- [ ] Criar tipos de eventos SSE.
-- [ ] Implementar patches incrementais.
-- [ ] Garantir que reload completo continue como fallback.
+- [x] Criar Change Manager.
+- [x] Separar estado IA de estado Git.
+- [x] Definir modelo de eventos.
+- [x] Criar tipos de eventos SSE.
+- [x] Implementar patches incrementais.
+- [x] Garantir que reload completo continue como fallback.
 
 ## Fase B — Change Graph
 
-- [ ] Criar aba IA/Git.
-- [ ] Implementar cores de novo/modificado/deletado.
-- [ ] Implementar legenda.
-- [ ] Implementar tooltip.
-- [ ] Implementar estado pulsante durante operação da IA.
+- [x] Criar aba IA/Git.
+- [x] Implementar cores de novo/modificado/deletado.
+- [x] Implementar legenda.
+- [x] Implementar tooltip.
+- [x] Implementar estado pulsante durante operação da IA.
 
 ## Fase C — Performance
 
-- [ ] Limite de nós.
-- [ ] Expansão sob demanda.
-- [ ] Preservação de layout.
-- [ ] Atualização incremental.
-- [ ] Evitar layout global.
-- [ ] Testes com 1.000, 3.000, 10.000+ nós.
+- [x] Limite de nós.
+- [x] Expansão sob demanda.
+- [x] Preservação de layout.
+- [x] Atualização incremental.
+- [x] Evitar layout global.
+- [x] Testes com 1.000, 3.000, 10.000+ nós.
 
 ## Fase D — Impact Graph
 
-- [ ] Seleção de alteração.
-- [ ] Mostrar chamadores.
-- [ ] Mostrar dependências.
-- [ ] Mostrar relações indiretas.
-- [ ] Criar expansão progressiva.
+- [x] Seleção de alteração.
+- [x] Mostrar chamadores.
+- [x] Mostrar dependências.
+- [x] Mostrar relações indiretas.
+- [x] Criar expansão progressiva.
 
 ## Fase E — Experiência IA
 
-- [ ] Estado "AI Working".
-- [ ] Animação de criação.
-- [ ] Animação de modificação.
-- [ ] Animação de exclusão.
-- [ ] Agrupamento de alterações.
-- [ ] Histórico da operação.
-- [ ] Transição após commit.
+- [x] Estado "AI Working".
+- [x] Animação de criação.
+- [x] Animação de modificação.
+- [x] Animação de exclusão.
+- [x] Agrupamento de alterações.
+- [x] Histórico da operação.
+- [x] Transição após commit.
 
 ## Fase F — Refinamento
 
-- [ ] Mini-map.
-- [ ] Clustering.
-- [ ] Controles de profundidade.
-- [ ] Atalhos de teclado.
-- [ ] Preferências de animação.
-- [ ] Modo de acessibilidade sem animações.
-- [ ] Métricas de performance.
+- [x] Mini-map.
+- [x] Clustering.
+- [x] Controles de profundidade.
+- [x] Atalhos de teclado.
+- [x] Preferências de animação.
+- [x] Modo de acessibilidade sem animações.
+- [x] Métricas de performance.
 
 ---
 
