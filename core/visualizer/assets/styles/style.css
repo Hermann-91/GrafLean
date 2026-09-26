@@ -1,0 +1,1085 @@
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        /* Scrollbar Escuro e Elegante (Estilo Sublime) */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #3e3d32 #1e1f1c;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1f1c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3e3d32;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #57564b;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            background-color: #000000;
+            color: #f8f8f2;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Sidebar Principal / Workspace */
+        #sidebar {
+            width: 580px;
+            min-width: 380px;
+            max-width: 90vw;
+            background: #000000;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+            transition: margin-left 0.25s ease;
+            position: relative;
+        }
+        #sidebar.collapsed {
+            margin-left: -100%;
+        }
+        
+        /* Divisor Arrastável Externo com o Mouse (Sidebar vs Grafo) */
+        #resizer {
+            width: 7px;
+            min-width: 7px;
+            cursor: col-resize;
+            background: rgba(255, 255, 255, 0.08);
+            transition: background 0.15s ease, box-shadow 0.15s ease;
+            z-index: 120;
+            user-select: none;
+        }
+        #resizer:hover, #resizer.dragging {
+            background: #66d9ef !important;
+            box-shadow: 0 0 12px rgba(102, 217, 239, 0.8) !important;
+        }
+
+        /* Layout Dividido: Coluna de Navegação + Coluna de Código */
+        .workspace-body {
+            display: flex;
+            flex: 1;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 1. Sub-Painel de Navegação (Árvore / Inspetor) */
+        #nav-subpanel {
+            width: 270px;
+            min-width: 180px;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            background: #000000;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            transition: none;
+        }
+        .workspace-body.code-collapsed #nav-subpanel {
+            width: 100% !important;
+            min-width: 200px !important;
+            max-width: none !important;
+            border-right: none !important;
+        }
+        .workspace-body.code-collapsed #internal-resizer {
+            display: none !important;
+        }
+        .workspace-body.code-collapsed #editor-subpanel {
+            display: none !important;
+        }
+        #nav-subpanel.hidden {
+            display: none !important;
+        }
+
+        /* Header Minimalista da Navegação */
+        .nav-top-header {
+            height: 38px;
+            min-height: 38px;
+            padding: 0 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            background: #000000;
+            box-sizing: border-box;
+        }
+        .nav-hub-btn {
+            padding: 4px 7px;
+            font-size: 13px;
+            line-height: 1;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #66d9ef;
+            background: #141414;
+            border: 1px solid #282828;
+            transition: all 0.15s ease;
+        }
+        .nav-hub-btn:hover {
+            background: rgba(102, 217, 239, 0.2);
+            border-color: #66d9ef;
+            color: #66d9ef;
+            transform: scale(1.05);
+        }
+        .nav-project-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #f8f8f2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }
+        .nav-icon-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .nav-tab-btn {
+            padding: 4px 7px;
+            background: #141414;
+            border: 1px solid #282828;
+            border-radius: 4px;
+            color: #75715e;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .nav-tab-btn:hover {
+            color: #f8f8f2;
+            border-color: #66d9ef;
+        }
+        .nav-tab-btn.active {
+            color: #66d9ef;
+            background: rgba(102, 217, 239, 0.15);
+            border-color: #66d9ef;
+            box-shadow: 0 0 6px rgba(102, 217, 239, 0.3);
+        }
+        .nav-toggle-btn {
+            padding: 4px 8px;
+            background: transparent;
+            border: none;
+            color: #75715e;
+            cursor: pointer;
+            font-size: 11px;
+            border-radius: 4px;
+        }
+        .nav-toggle-btn:hover {
+            background: #1f1f1f;
+            color: #f8f8f2;
+        }
+
+        .nav-content-pane {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Divisor Arrastável Interno (Árvore vs Código) */
+        #internal-resizer {
+            width: 6px;
+            min-width: 6px;
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.15s ease;
+            z-index: 110;
+            user-select: none;
+        }
+        #internal-resizer:hover, #internal-resizer.dragging {
+            background: #66d9ef !important;
+            box-shadow: 0 0 8px rgba(102, 217, 239, 0.6) !important;
+        }
+
+        /* 2. Sub-Painel de Código */
+        #editor-subpanel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: #000000;
+        }
+
+        /* Barra de Ações da Árvore (Retrair, Buscar Símbolos, Buscar Texto e Filtro) */
+        .tree-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+        .tree-action-btn {
+            width: 28px;
+            min-width: 28px;
+            height: 28px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            background: #141414;
+            border: 1px solid #282828;
+            border-radius: 5px;
+            color: #f8f8f2;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .tree-action-btn:hover {
+            background: #222222;
+            border-color: #66d9ef;
+            color: #66d9ef;
+        }
+        .tree-toolbar .search-input {
+            flex: 1;
+            min-width: 60px;
+            height: 28px;
+            padding: 0 8px;
+            background: #0a0a0a;
+            border: 1px solid #222222;
+            border-radius: 5px;
+            color: #f8f8f2;
+            font-size: 11px;
+            outline: none;
+        }
+        .tree-toolbar .search-input:focus {
+            border-color: #66d9ef;
+        }
+
+        /* Project File Tree Styles (Composite Pattern) */
+        .tree-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+        .tree-node {
+            user-select: none;
+            font-size: 11px;
+        }
+        .tree-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 6px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tree-row:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .tree-row.active {
+            background: rgba(255, 255, 255, 0.09);
+            border-left: 3px solid #66d9ef;
+            color: #66d9ef;
+        }
+        .tree-arrow {
+            font-size: 10px;
+            width: 10px;
+            display: inline-block;
+            transition: transform 0.2s ease;
+            color: #75715e;
+        }
+        .tree-arrow.open {
+            transform: rotate(90deg);
+        }
+        .tree-children {
+            margin-left: 12px;
+            border-left: 1px dashed rgba(255, 255, 255, 0.15);
+            padding-left: 3px;
+            display: none;
+        }
+        .tree-children.open {
+            display: block;
+        }
+        .tree-file-name {
+            font-weight: 700;
+            color: #f8f8f2;
+        }
+        .tree-symbol-row {
+            margin-left: 14px;
+            font-size: 12.5px;
+            padding: 3px 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #75715e;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        .tree-symbol-row:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: #f8f8f2;
+        }
+        .tree-symbol-row.active {
+            background: rgba(166, 226, 46, 0.15);
+            color: #a6e22e;
+            font-weight: 600;
+        }
+        .badge-count {
+            font-size: 9px;
+            padding: 1px 5px;
+            background: #141414;
+            border-radius: 8px;
+            margin-left: auto;
+            color: #75715e;
+            border: 1px solid #242424;
+        }
+
+        /* Badges de Status Git */
+        .git-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            display: inline-block;
+            vertical-align: middle;
+            letter-spacing: 0.3px;
+        }
+        .git-badge-new {
+            background: rgba(166, 226, 46, 0.18);
+            color: #a6e22e;
+            border: 1px solid rgba(166, 226, 46, 0.45);
+        }
+        .git-badge-mod {
+            background: rgba(253, 151, 31, 0.18);
+            color: #fd971f;
+            border: 1px solid rgba(253, 151, 31, 0.45);
+        }
+        .git-badge-del {
+            background: rgba(249, 38, 114, 0.18);
+            color: #f92672;
+            border: 1px solid rgba(249, 38, 114, 0.45);
+        }
+
+        /* Botões de Ações na Árvore */
+        .tree-add-btn {
+            margin-left: auto;
+            background: transparent;
+            border: 1px solid rgba(166, 226, 46, 0.4);
+            color: #a6e22e;
+            border-radius: 50%;
+            width: 17px;
+            height: 17px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.15s ease;
+            line-height: 1;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        .tree-row:hover .tree-add-btn {
+            opacity: 1;
+        }
+        .tree-add-btn:hover {
+            background: #a6e22e;
+            color: #1e1e1e;
+            box-shadow: 0 0 6px rgba(166, 226, 46, 0.8);
+            transform: scale(1.15);
+        }
+        .tree-more-btn {
+            margin-left: auto;
+            background: transparent;
+            border: none;
+            color: #75715e;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0 4px;
+            opacity: 0;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+        .tree-row:hover .tree-more-btn {
+            opacity: 1;
+        }
+        .tree-more-btn:hover {
+            color: #66d9ef;
+            transform: scale(1.2);
+        }
+
+        /* Menu de Contexto Flutuante */
+        .tree-context-menu {
+            position: fixed;
+            z-index: 99999;
+            background: rgba(13, 13, 13, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+            padding: 6px;
+            min-width: 170px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .tree-context-header {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #66d9ef;
+            padding: 4px 8px 6px;
+            border-bottom: 1px solid #222222;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+        }
+        .tree-context-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            border: none;
+            color: #f8f8f2;
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .tree-context-item:hover {
+            background: rgba(102, 217, 239, 0.15);
+            color: #66d9ef;
+        }
+        .tree-context-item.danger:hover {
+            background: rgba(249, 38, 114, 0.2);
+            color: #f92672;
+        }
+
+        /* Inspector Details */
+        #inspector-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .card {
+            background: #080808;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #1a1a1a;
+        }
+        .card h3 {
+            font-size: 15px;
+            color: #66d9ef;
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+        .card-doc {
+            font-size: 13px;
+            color: #75715e;
+            font-style: italic;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        .metric-box {
+            background: #0d0d0d;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #1f1f1f;
+            font-size: 12px;
+        }
+        .metric-val {
+            font-size: 17px;
+            font-weight: bold;
+            color: #66d9ef;
+            margin-top: 2px;
+        }
+        .connection-list {
+            max-height: 140px;
+            overflow-y: auto;
+            font-size: 12.5px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .conn-item {
+            padding: 5px 8px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #0d0d0d;
+            border-radius: 3px;
+            border-left: 2px solid #66d9ef;
+            cursor: pointer;
+            word-break: break-all;
+        }
+        .conn-item:hover {
+            background: #181818;
+        }
+
+        /* ========================================================
+           SUBSTÂNCIA E ESTILO SUBLIME TEXT MONOKAI (1:1 COM O SUBLIME)
+           ======================================================== */
+        .sublime-editor-window {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #000000; /* Fundo Preto Absoluto */
+            overflow: hidden;
+            height: 100%;
+        }
+        .sublime-tab-header {
+            height: 38px;
+            min-height: 38px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #000000;
+            padding: 0 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 12px;
+            overflow: hidden;
+            gap: 6px;
+        }
+        .sublime-tabs-track {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            overflow-x: auto;
+            flex: 1;
+            scrollbar-width: none;
+        }
+        .sublime-tabs-track::-webkit-scrollbar { display: none; }
+        .sublime-tab-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #0a0a0a;
+            padding: 5px 10px;
+            border-radius: 5px 5px 0 0;
+            color: #75715e;
+            font-weight: 500;
+            font-size: 11.5px;
+            border: 1px solid #1a1a1a;
+            border-bottom: none;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            max-width: 175px;
+            min-width: 90px;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .sublime-tab-item:hover {
+            color: #f8f8f2;
+            background: #121212;
+        }
+        .sublime-tab-item.active {
+            background: #000000;
+            color: #f8f8f2;
+            border-top: 2px solid #66d9ef;
+            border-color: #282828 #282828 #000000 #282828;
+            font-weight: 600;
+            margin-bottom: -1px;
+            z-index: 2;
+        }
+        .sublime-tab-icon {
+            flex-shrink: 0;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .sublime-tab-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        .sublime-tab-name.is-preview {
+            font-style: italic;
+            opacity: 0.85;
+        }
+        .sublime-tab-close {
+            flex-shrink: 0;
+            font-size: 11px;
+            opacity: 0.6;
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.12s ease;
+            margin-left: 2px;
+        }
+        .sublime-tab-item:hover .sublime-tab-close {
+            opacity: 0.85;
+        }
+        .sublime-tab-close:hover {
+            opacity: 1 !important;
+            color: #f92672;
+            background: rgba(249, 38, 114, 0.25);
+        }
+        .sublime-toolbar-actions {
+            display: flex;
+            gap: 6px;
+            padding: 4px 0;
+            margin-left: auto;
+        }
+        .sublime-btn {
+            padding: 4px 8px;
+            background: #141414;
+            border: 1px solid #282828;
+            border-radius: 4px;
+            color: #f8f8f2;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .sublime-btn:hover {
+            background: #f92672;
+            color: #fff;
+            border-color: #f92672;
+        }
+        .sublime-code-viewport {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            background-color: #000000;
+        }
+        #sublime-editor-textarea {
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            color: #f8f8f2;
+            font-family: "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 14px 18px;
+            border: none;
+            outline: none;
+            resize: none;
+            tab-size: 4;
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            display: none;
+        }
+
+        /* CodeMirror Monokai OLED (Edição em Tempo Real com Sintaxe e Word-Wrap) */
+        .CodeMirror {
+            height: 100% !important;
+            background-color: #000000 !important;
+            font-family: "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace !important;
+            font-size: 14.5px !important;
+            line-height: 1.6 !important;
+            color: #f8f8f2 !important;
+        }
+        .CodeMirror-gutters {
+            background-color: #000000 !important;
+            border-right: 1px solid #1a1a1a !important;
+            color: #75715e !important;
+        }
+        .CodeMirror-linenumber {
+            color: #75715e !important;
+            padding-right: 12px !important;
+        }
+        .CodeMirror-cursor {
+            border-left: 2px solid #66d9ef !important;
+        }
+        .cm-s-monokai.CodeMirror {
+            background: #000000 !important;
+        }
+        .CodeMirror-selected {
+            background: rgba(255, 255, 255, 0.15) !important;
+        }
+        .CodeMirror-line {
+            padding-left: 10px !important;
+        }
+
+        /* Toast Notificação Moderna e Não Bloqueante */
+        .graf-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #0d0d0d;
+            color: #f8f8f2;
+            padding: 10px 18px;
+            border-radius: 6px;
+            border: 1px solid #a6e22e;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+            z-index: 999999;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+        .graf-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .graf-toast.error {
+            border-color: #f92672;
+            color: #f92672;
+        }
+
+        /* Tabela com Gutter e Código 100% Monokai */
+        .sublime-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace;
+            font-size: 14.5px;
+            line-height: 1.6;
+            color: #f8f8f2;
+            background-color: #000000;
+        }
+        .sublime-table td {
+            padding: 0;
+            vertical-align: top;
+        }
+        .sublime-gutter {
+            width: 48px;
+            min-width: 48px;
+            text-align: right;
+            padding-right: 14px;
+            color: #75715e; /* Cinza oficial do gutter do Sublime */
+            user-select: none;
+            border-right: 1px solid #1a1a1a;
+            background-color: #000000;
+        }
+        .sublime-code-cell {
+            padding-left: 14px;
+            padding-right: 14px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background-color: #000000;
+        }
+
+        /* Linha Ativa no Sublime */
+        tr.active-sublime-line {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            outline: 1px solid rgba(255, 255, 255, 0.22) !important;
+        }
+        tr.active-sublime-line .sublime-gutter {
+            color: #f8f8f2 !important;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        tr.active-sublime-line .sublime-code-cell {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        /* Cores Oficiais Monokai Sublime dos Tokens */
+        .hljs-keyword, .hljs-selector-tag, .hljs-tag { color: #f92672 !important; font-weight: 500; } /* Rosa/Pink */
+        .hljs-title.class_, .hljs-type, .hljs-built_in { color: #66d9ef !important; font-style: italic; } /* Ciano */
+        .hljs-title.function_, .hljs-function .hljs-title { color: #a6e22e !important; } /* Verde Limão */
+        .hljs-variable, .hljs-template-variable, .hljs-params { color: #fd971f !important; } /* Laranja */
+        .hljs-string { color: #e6db74 !important; } /* Amarelo */
+        .hljs-number, .hljs-literal { color: #ae81ff !important; } /* Roxo */
+        .hljs-comment, .hljs-quote { color: #75715e !important; font-style: italic; } /* Cinza Comentário */
+        .hljs-meta { color: #f8f8f2 !important; }
+
+        /* Barra de Status Inferior do Sublime Text */
+        .sublime-statusbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0a0a0a;
+            border-top: 1px solid #1a1a1a;
+            padding: 4px 12px;
+            font-size: 11px;
+            color: #75715e;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        /* Main Network Canvas */
+        #network {
+            flex: 1;
+            height: 100%;
+            background-color: #000000;
+        }
+        
+        /* Footer status */
+        .sidebar-footer {
+            padding: 6px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 11px;
+            color: #75715e;
+            display: flex;
+            justify-content: space-between;
+            background: #000000;
+        }
+
+        /* Quick Palette (Sublime Ctrl+P) */
+        .quick-palette-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+            z-index: 999999;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 60px;
+        }
+        .quick-palette-modal {
+            width: 90%;
+            max-width: 640px;
+            background: #0d0d0d;
+            border: 1px solid #282828;
+            border-radius: 8px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .quick-palette-input-wrap {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid #1f1f1f;
+            background: #080808;
+        }
+        .quick-palette-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #f8f8f2;
+            font-size: 14px;
+            font-family: inherit;
+            margin-left: 8px;
+        }
+        .quick-palette-results {
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+        .quick-palette-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #f8f8f2;
+            border-left: 3px solid transparent;
+        }
+        .quick-palette-item:hover, .quick-palette-item.active {
+            background: rgba(102, 217, 239, 0.12);
+            border-left-color: #66d9ef;
+        }
+        .quick-palette-footer {
+            padding: 6px 14px;
+            background: #080808;
+            border-top: 1px solid #1a1a1a;
+            font-size: 11px;
+            color: #75715e;
+            display: flex;
+            gap: 16px;
+        }
+
+        /* Find in Files Modal (Sublime Ctrl+Shift+F) */
+        .find-files-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(8px);
+            z-index: 999999;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 50px;
+        }
+        .find-files-modal {
+            width: 92%;
+            max-width: 780px;
+            background: #0d0d0d;
+            border: 1px solid #282828;
+            border-radius: 8px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .find-files-input-wrap {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid #1f1f1f;
+            background: #080808;
+            gap: 8px;
+        }
+        .find-files-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #f8f8f2;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .find-files-toggle {
+            background: #141414;
+            border: 1px solid #282828;
+            color: #75715e;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 7px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .find-files-toggle.active {
+            background: rgba(102, 217, 239, 0.15);
+            color: #66d9ef;
+            border-color: #66d9ef;
+        }
+        .find-files-results {
+            max-height: 420px;
+            overflow-y: auto;
+            padding: 4px 0;
+            font-family: "Fira Code", Consolas, monospace;
+            font-size: 12px;
+        }
+        .find-file-group {
+            background: #080808;
+            padding: 6px 14px;
+            border-top: 1px solid #1a1a1a;
+            border-bottom: 1px solid #1a1a1a;
+            color: #66d9ef;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .find-result-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 14px 6px 28px;
+            cursor: pointer;
+            color: #f8f8f2;
+            border-left: 3px solid transparent;
+            gap: 12px;
+            transition: background 0.12s ease;
+        }
+        .find-result-item:hover, .find-result-item.active {
+            background: rgba(102, 217, 239, 0.12);
+            border-left-color: #66d9ef;
+        }
+        .find-line-num {
+            color: #75715e;
+            min-width: 38px;
+            text-align: right;
+            user-select: none;
+            font-size: 11px;
+        }
+        .find-snippet {
+            flex: 1;
+            white-space: pre;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .find-highlight {
+            background: rgba(230, 219, 116, 0.25);
+            color: #e6db74;
+            font-weight: bold;
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        /* 12. Abas de Perspectiva do Grafo (CÓDIGO / IA & GIT / IMPACTO) */
+        .perspective-tab {
+            background: transparent;
+            border: none;
+            color: #75715e;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 3px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            outline: none;
+        }
+        .perspective-tab:hover {
+            color: #f8f8f2;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .perspective-tab.active {
+            color: #000000;
+            background: #66d9ef;
+            box-shadow: 0 0 8px rgba(102, 217, 239, 0.4);
+        }
+        .change-badge {
+            display: inline-block;
+            transition: transform 0.2s ease;
+        }
+
+        /* Animação Pulsante da IA (Fase E) */
+        @keyframes ai-pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(102, 217, 239, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(102, 217, 239, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(102, 217, 239, 0);
+            }
+        }
+
+        .ai-working-pulse {
+            animation: ai-pulse 1.8s infinite;
+        }
+
+        /* Acessibilidade: Desativa animações se o sistema operacional preferir */
+        @media (prefers-reduced-motion: reduce) {
+            .ai-working-pulse, #resizer, .perspective-tab {
+                animation: none !important;
+                transition: none !important;
+            }
+        }

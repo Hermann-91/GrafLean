@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PROJECT_NAME}} — GrafLean</title>
+    <!-- Vis.js para Renderização de Grafo -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <!-- Highlight.js: Motor de Sintaxe Universal (Suporte Nativo a PHP, Python, JS, TS, Bash, YAML) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/php.min.js"></script>
+
+    <!-- CodeMirror: Editor com Realce de Sintaxe em Tempo Real e Word-Wrap (Estilo Sublime) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/php/php.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+
+    <style>/*{{STYLES}}*/</style>
+</head>
+<body>
+    <div id="sidebar">
+        <!-- Corpo Dividido: Árvore/Inspetor à esquerda + Código no centro -->
+        <div class="workspace-body">
+            <!-- 1. Sub-Painel de Navegação -->
+            <div id="nav-subpanel">
+                <div class="nav-top-header">
+                    <a href="/" class="sublime-btn nav-hub-btn" id="btn-hub-link" title="🏛️ GrafLean | ◀ Biblioteca (Hub)">🏛️</a>
+                    <span class="nav-project-title" title="{{PROJECT_NAME}}">📁 {{PROJECT_NAME}}</span>
+                    <div class="nav-icon-tabs">
+                        <button class="nav-tab-btn active" id="subtab-btn-tree" onclick="switchNavTab('tree')" title="Árvore de Arquivos">📁</button>
+                        <button class="nav-tab-btn" id="subtab-btn-inspector" onclick="switchNavTab('inspector')" title="Inspetor de Métricas Arquiteturais">ℹ️</button>
+                        <button class="sublime-btn" id="btn-nav-reopen-code" onclick="toggleCodeSubpanel(false)" style="display:none; color:#f8f8f2; font-weight:bold; padding:4px 8px;" title="Reabrir Editor de Código">▶</button>
+                        <button class="sublime-btn" id="btn-nav-reopen-graph" onclick="toggleGraphPanel(false)" style="display:none; color:#66d9ef; font-weight:bold; padding:4px 8px;" title="Reabrir Grafo">🌐</button>
+                    </div>
+                </div>
+
+                <!-- Sub-aba 1: Árvore de Arquivos -->
+                <div class="nav-content-pane" id="nav-pane-tree">
+                    <div class="tree-toolbar">
+                        <button class="sublime-btn tree-action-btn" id="btn-collapse-tree" onclick="collapseAllFolders()" title="Recolher Todas as Pastas (Retrair Árvore)">⊟</button>
+                        <button class="sublime-btn tree-action-btn" id="btn-find-in-files-tree" onclick="openFindInFiles()" title="Buscar Texto nos Arquivos (Ctrl+Shift+F)">🔍</button>
+                        <input type="text" class="search-input" id="search" placeholder="Filtrar na árvore..." oninput="onSearchInput(this.value)">
+                    </div>
+
+                    <div class="tree-container" id="tree-root"></div>
+                </div>
+
+                <!-- Sub-aba 2: Inspetor de Métricas -->
+                <div class="nav-content-pane" id="nav-pane-inspector" style="display: none;">
+                    <div id="inspector-placeholder" style="color: #75715e; font-size: 11px; text-align: center; margin-top: 30px;">
+                        👈 Clique em qualquer arquivo ou símbolo na árvore ou no grafo para inspecionar métricas e conexões.
+                    </div>
+                    <div id="inspector-content" style="display: none;">
+                        <div class="card">
+                            <b style="font-size: 11px; color: #f8f8f2;">⚖️ Métricas de Arquitetura Limpa:</b>
+                            <div class="metric-grid">
+                                <div class="metric-box">
+                                    <div>Acoplamento Aferente (Ca)</div>
+                                    <div class="metric-val" id="det-ca">0</div>
+                                </div>
+                                <div class="metric-box">
+                                    <div>Acoplamento Eferente (Ce)</div>
+                                    <div class="metric-val" id="det-ce">0</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 6px; font-size: 11px;">
+                                Instabilidade (I): <b id="det-inst" style="color: #fd971f;">0.0</b>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <b style="font-size: 11px; color: #a6e22e;">📥 Chamado por (Inbound):</b>
+                            <div class="connection-list" id="det-inbound"></div>
+                        </div>
+
+                        <div class="card">
+                            <b style="font-size: 11px; color: #fd971f;">📤 Depende de (Outbound):</b>
+                            <div class="connection-list" id="det-outbound"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divisor Arrastável Interno (Árvore vs Código) -->
+            <div id="internal-resizer" title="Arraste para ajustar a largura da Árvore"></div>
+
+            <!-- 2. Sub-Painel do Editor de Código Monokai Sublime -->
+            <div id="editor-subpanel">
+                <div class="sublime-editor-window">
+                    <div class="sublime-tab-header">
+                        <!-- Trilho de Múltiplas Abas de Arquivos (Sublime OLED) -->
+                        <div class="sublime-tabs-track" id="sublime-tabs-track"></div>
+                        <div class="sublime-toolbar-actions">
+                            <button class="sublime-btn" id="btn-save-code" onclick="saveCurrentCode()" style="display:none; background:#a6e22e; color:#000000; font-weight:700; border-color:#a6e22e; padding:3px 8px;" title="Salvar Alterações no Disco (Ctrl+S)">💾 Salvar</button>
+                            <button class="sublime-btn" id="btn-toggle-edit" onclick="toggleEditMode()" style="padding:3px 8px;" title="Entrar em Modo Edição">✏️</button>
+                            <button class="sublime-btn" onclick="copyCurrentCode()" style="padding:3px 8px;" title="Copiar Código (Área de Transferência)">📋</button>
+                            <button class="sublime-btn" id="btn-reopen-graph-stage" onclick="toggleGraphPanel(false)" style="display:none; color:#66d9ef; font-weight:bold; padding:3px 8px;" title="Reabrir Grafo">🌐</button>
+                            <button class="sublime-btn" id="btn-collapse-stage" onclick="toggleCodeSubpanel()" style="background:#141414; border-color:#282828; color:#f8f8f2; font-weight:bold; padding:3px 8px;" title="Ocultar/Mostrar Editor de Código">◀</button>
+                        </div>
+                    </div>
+
+                    <div class="sublime-code-viewport" id="code-viewport">
+                        <div id="sublime-table-container">
+                            <div style="padding: 20px; color: #75715e; font-family: monospace;">
+                                // Clique em qualquer arquivo ou símbolo da árvore à esquerda para carregar o código...
+                            </div>
+                        </div>
+                        <textarea id="sublime-editor-textarea" spellcheck="false" placeholder="Digite ou edite o conteúdo do arquivo aqui..."></textarea>
+                    </div>
+
+                    <div class="sublime-statusbar">
+                        <span id="sublime-status-pos">Line 1, Column 1</span>
+                        <span id="sublime-status-lang">UTF-8 | Plain Text</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rodapé da Barra Lateral -->
+        <div class="sidebar-footer">
+            <span>0 nós</span>
+            <span>0 conexões</span>
+        </div>
+    </div>
+
+    <!-- Divisor Arrastável Externo com o Mouse (Sidebar vs Grafo) -->
+    <div id="resizer" title="Arraste com o mouse para redimensionar a barra lateral"></div>
+
+    <button id="sidebar-reopen-btn" class="sublime-btn" onclick="toggleSidebar()" style="display:none; position:absolute; top:12px; left:12px; z-index:150; height:31px; padding:6px 11px; font-weight:bold; background:#141414; border:1px solid #282828; color:#66d9ef;" title="Reabrir Barra Lateral">▶</button>
+
+    <div id="network-container" style="flex:1; position:relative; height:100%; width:100%;">
+        <!-- Barra de Ferramentas Superior do Grafo -->
+        <div id="graph-toolbar" style="position:absolute; top:0; left:0; right:0; height:38px; box-sizing:border-box; z-index:90; display:flex; align-items:center; justify-content:space-between; background:#000000; padding:0 10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <select id="select-graph-depth" onchange="setGraphDepth(this.value)" class="sublime-btn" style="background:#141414; color:#f8f8f2; border:1px solid #282828; padding:3px 8px; font-size:11px; border-radius:4px; cursor:pointer; outline:none;" title="Profundidade de Conexões do Grafo">
+                    <option value="1" selected>🎯 Fase 1</option>
+                    <option value="2">🌐 Fase 2</option>
+                </select>
+                <span id="graph-nodes-count" style="font-size:11px; color:#75715e; align-self:center; margin-left:4px; font-weight:600;">-- nós</span>
+                <span style="display:flex; align-items:center; gap:3px; font-size:11px; margin-left:6px; color:#66d9ef;" title="Conexões de Envio (Quem este elemento chama)">
+                    <span style="display:inline-block; width:10px; height:2px; background:#66d9ef;"></span> ↑
+                </span>
+                <span style="display:flex; align-items:center; gap:3px; font-size:11px; margin-left:4px; color:#fd971f;" title="Conexões de Entrada (Quem chama este elemento)">
+                    <span style="display:inline-block; width:10px; height:2px; background:#fd971f;"></span> ↓
+                </span>
+            </div>
+            <div class="graph-perspectives-nav" id="graph-perspectives" style="display:flex; gap:2px; background:#141414; border:1px solid #282828; border-radius:4px; padding:2px;">
+                <button class="perspective-tab active" id="btn-perspective-code" onclick="switchPerspective('code')" title="Code Graph: Arquitetura Estrutural do Software">CÓDIGO</button>
+                <button class="perspective-tab" id="btn-perspective-change" onclick="switchPerspective('change')" title="Change Graph: Modificações IA & Git">IA / GIT <span id="change-badge" class="change-badge" style="display:none; background:#a6e22e; color:#000; font-size:9px; font-weight:bold; border-radius:8px; padding:0 4px; margin-left:2px;">0</span></button>
+                <button class="perspective-tab" id="btn-perspective-impact" onclick="switchPerspective('impact')" title="Impact Graph: Área Afetada">IMPACTO</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+                <button class="sublime-btn" id="btn-quick-open" onclick="openQuickPalette()" title="Busca Rápida de Arquivos e Símbolos (Ctrl+P)" style="padding:3px 8px;">🔍</button>
+                <button class="sublime-btn" id="btn-find-in-files" onclick="openFindInFiles()" title="Localizar Texto nos Arquivos (Ctrl+Shift+F)" style="padding:3px 8px;">📝</button>
+                <button class="sublime-btn" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Ocultar/Expandir Grafo (Tela Cheia de Código)" style="color:#66d9ef; font-weight:bold; padding:3px 8px;">🌐</button>
+            </div>
+        </div>
+
+        <!-- Banner de Resumo de Alterações (Change Graph) -->
+        <div id="change-summary-banner" style="display:none; position:absolute; top:42px; left:12px; right:12px; z-index:85; background:rgba(20,20,20,0.92); border:1px solid #3e3d32; border-radius:4px; padding:6px 12px; font-size:11px; backdrop-filter:blur(8px); justify-content:space-between; align-items:center;">
+            <div id="change-summary-stats" style="display:flex; gap:12px; align-items:center;">
+                <span id="stat-new" style="color:#a6e22e; font-weight:600;">● 0 novos</span>
+                <span id="stat-mod" style="color:#fd971f; font-weight:600;">● 0 modificados</span>
+                <span id="stat-del" style="color:#f92672; font-weight:600;">● 0 excluídos</span>
+                <span id="ai-active-indicator" style="display:none; color:#66d9ef; font-weight:bold;">⚡ IA em execução...</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+                <button class="sublime-btn" onclick="focusNextChange()" style="padding:2px 8px; font-size:10px;">Próxima Mudança ▶</button>
+            </div>
+        </div>
+
+        <!-- Banner de Limite de Renderização Inteligente -->
+        <div id="graph-limit-banner" style="display:none; position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:85; background:rgba(20,20,20,0.96); border:1px solid #fd971f; border-radius:6px; padding:8px 16px; font-size:12px; color:#f8f8f2; box-shadow:0 4px 20px rgba(0,0,0,0.7); display:flex; align-items:center; gap:12px;">
+            <span>⚠️ Visualização otimizada ativa (limite de 250 nós).</span>
+            <button class="sublime-btn" onclick="expandGraphLimit()" style="background:#fd971f; color:#000; font-weight:bold; padding:3px 10px; border:none; border-radius:3px; cursor:pointer;">Expandir Região</button>
+            <button class="sublime-btn" onclick="switchPerspective('change')" style="padding:3px 10px; cursor:pointer;">Apenas Alterações</button>
+        </div>
+        <div id="network" style="width:100%; height:100%;"></div>
+    </div>
+
+    <!-- Dados Protegidos e Imunes a Conflito de Tags Internas -->
+    <!--{{DATA_SCRIPTS}}-->
+
+    <script>/*{{SCRIPTS}}*/</script>
+
+    <!-- Modal Quick Palette (Ctrl+P) -->
+    <div id="quick-palette-backdrop" class="quick-palette-backdrop" style="display:none;" onclick="if(event.target===this)closeQuickPalette();">
+        <div class="quick-palette-modal">
+            <div class="quick-palette-input-wrap">
+                <span style="color:#66d9ef; font-size:14px;">🔍</span>
+                <input type="text" id="quick-palette-input" class="quick-palette-input" placeholder="Buscar arquivo ou símbolo... (Ctrl+P)" oninput="onQuickPaletteInput(this.value)" onkeydown="onQuickPaletteKeyDown(event)">
+                <button onclick="closeQuickPalette()" style="background:transparent; border:none; color:#75715e; cursor:pointer; font-size:14px;">✕</button>
+            </div>
+            <div id="quick-palette-results" class="quick-palette-results"></div>
+            <div class="quick-palette-footer">
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↑</kbd> <kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↓</kbd> navegar</span>
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Enter</kbd> abrir</span>
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Esc</kbd> fechar</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Find in Files (Ctrl+Shift+F) -->
+    <div id="find-files-backdrop" class="find-files-backdrop" style="display:none;" onclick="if(event.target===this)closeFindInFiles();">
+        <div class="find-files-modal">
+            <div class="find-files-input-wrap">
+                <span style="color:#66d9ef; font-size:14px;">🔎</span>
+                <input type="text" id="find-files-input" class="find-files-input" placeholder="Buscar texto em todos os arquivos do projeto... (Ctrl+Shift+F)" oninput="onFindInFilesInput(this.value)" onkeydown="onFindInFilesKeyDown(event)">
+                <button id="btn-find-case" class="find-files-toggle" onclick="toggleFindCaseSensitive()" title="Diferenciar maiúsculas/minúsculas (Match Case)">Aa</button>
+                <span id="find-files-count" style="font-size:11px; color:#75715e; white-space:nowrap;"></span>
+                <button onclick="closeFindInFiles()" style="background:transparent; border:none; color:#75715e; cursor:pointer; font-size:14px;">✕</button>
+            </div>
+            <div id="find-files-results" class="find-files-results">
+                <div style="padding:20px; text-align:center; color:#75715e;">Digite um termo para pesquisar em todos os arquivos...</div>
+            </div>
+            <div class="quick-palette-footer">
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↑</kbd> <kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">↓</kbd> navegar</span>
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Enter</kbd> abrir na linha</span>
+                <span><kbd style="background:#1a1a1a; padding:1px 4px; border-radius:3px;">Esc</kbd> fechar</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Flutuante Contextual para Pastas e Arquivos -->
+    <div id="tree-context-menu" class="tree-context-menu" style="display:none;"></div>
+</body>
+</html>
