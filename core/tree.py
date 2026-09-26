@@ -102,14 +102,21 @@ class ProjectTreeBuilder:
         root_name = os.path.basename(self.root_dir) or "root"
         root = DirectoryNode(root_name, "")
 
-        # 1. Descobre todos os diretórios e arquivos reais no disco (inclusive arquivos .md, configs, etc.)
-        ignored_dirs = {".git", ".svn", ".hg", "__pycache__", "node_modules", "vendor", ".idea", ".vscode"}
+        # 1. Descobre todos os diretórios e arquivos reais no disco (inclusive .idea, .docs, .env, etc.)
+        ignored_dirs = {".git", ".svn", ".hg", "__pycache__", "node_modules", "vendor", ".venv", "venv"}
         ignored_files = {"arch_map.html", ".arch_graph.json"}
         files_map: Dict[str, FileLeaf] = {}
 
+        try:
+            from core.git_tracker import GitTracker
+            git_tracker = GitTracker(self.root_dir)
+            git_status_map = git_tracker.get_status_map()
+        except Exception:
+            git_status_map = {}
+
         if os.path.exists(self.root_dir):
             for root_path, dirs, files in os.walk(self.root_dir):
-                dirs[:] = [d for d in dirs if d not in ignored_dirs and not d.startswith(".")]
+                dirs[:] = [d for d in dirs if d not in ignored_dirs]
                 rel_dir = os.path.relpath(root_path, self.root_dir)
                 if rel_dir != ".":
                     parts = rel_dir.split(os.sep)
@@ -120,14 +127,17 @@ class ProjectTreeBuilder:
                         curr = curr.get_or_create_dir(part, curr_p)
 
                 for f in files:
-                    if f in ignored_files or f.startswith("."):
+                    if f in ignored_files:
                         continue
                     full_f = os.path.join(root_path, f)
                     rel_f = os.path.relpath(full_f, self.root_dir)
-                    files_map[rel_f] = FileLeaf(f, rel_f, f"file://{full_f}")
+                    f_git = git_status_map.get(full_f, "")
+                    files_map[rel_f] = FileLeaf(f, rel_f, f"file://{full_f}", git_status=f_git)
 
         # 2. Agrupa nós de símbolos por arquivo e atualiza status git
         for node in self.nodes.values():
+            if node.file_path in git_status_map:
+                node.git_status = git_status_map[node.file_path]
             rel_file = os.path.relpath(node.file_path, self.root_dir)
             if rel_file not in files_map:
                 file_id = f"file://{node.file_path}"
