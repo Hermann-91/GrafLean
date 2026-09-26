@@ -4,6 +4,52 @@ Todas as alterações relevantes do **GrafLean** são documentadas neste arquivo
 
 ---
 
+## [2.2.0] - 2026-09-26
+
+### 🚀 Arquitetura & Alta Performance
+- **Modularização Arquitetural do `visualizer.py`**:
+  - Eliminação da dívida técnica do arquivo monolítico de 3.398 linhas.
+  - Criação do pacote modular `core/visualizer/`:
+    - `data_serializer.py`: classe `GraphDataSerializer` com métodos dedicados e sanitização estrita (RFC 8259).
+    - `template_engine.py`: classe `TemplateEngine` com carregamento único e cache em memória (zero leitura repetida de disco em tempo de execução).
+    - `visualizer.py`: orquestrador desacoplado `ArchitectureVisualizer` mantendo 100% de retrocompatibilidade com a API pública.
+    - `assets/`: isolamento limpo de templates (`workspace.html`), estilos (`style.css`) e scripts (`app.js`) sem interpolações frágeis de f-string ou escape de chaves duplas.
+
+### 🧠 Change Manager & Eventos Semânticos SSE (Fase A)
+- **Desacoplamento de Estados**:
+  - `core/change_manager.py`: separação estrita entre o estado operacional transitório da IA (`idle`, `creating`, `editing`, `analyzing`, `finished`, `error`) e o estado versionado do Git (`untracked`, `modified`, `deleted`, `staged`, `committed`).
+- **Eventos Granulares em Tempo Real**:
+  - Emissão de patches estruturados via SSE: `node_created`, `node_changed`, `node_deleted`, `edge_added`, `edge_removed`, `ai_state`, `git_status`.
+- **Motor de Patches Incrementais no Frontend**:
+  - Aplicação direta de alterações via `nodes.add()`, `nodes.update()`, `nodes.remove()`, preservando posições e estabilidade do layout Vis.js sem reconstruir o grafo do zero.
+- **Novas Rotas REST**:
+  - `POST /api/ai-state`: Permite que assistentes de IA e ferramentas externas sinalizem em tempo real qual arquivo estão criando, editando ou analisando.
+  - `POST /api/changes`: Consulta do resumo atual das alterações (contadores de novos, modificados e excluídos).
+
+### 🎨 Change Graph & Abas de Perspectiva (Fase B)
+- **Seletor de Perspectivas Triplo**:
+  - `[ CÓDIGO ]`: Mapa arquitetural estrutural padrão.
+  - `[ IA / GIT ]`: Foco dedicado nas mutações ativas, com código de cores verde (novo), laranja (modificado), vermelho (deletado) e elementos neutros esmaecidos.
+  - `[ IMPACTO ]`: Foco isolado na cascata de chamadores e dependências de 1º e 2º grau do nó selecionado.
+- **Experiência Visual e Animações da IA**:
+  - Efeito luminoso pulsante (`@keyframes ai-pulse`) em nós com operação ativa da IA (`creating` ou `editing`).
+  - Suporte a acessibilidade com desativação automática de transições quando `prefers-reduced-motion: reduce` estiver ativo.
+- **Change Summary Banner**:
+  - Banner dinâmico com contadores em tempo real e botão de navegação facilitada `Próxima Mudança ▶`.
+
+### ⚡ Otimização de Performance e Escala (Fase C)
+- **Limite Protetivo de Visualização**:
+  - `GRAPH_NODE_LIMIT = 250` com banner não-bloqueante e botão `Expandir Região`.
+- **Preservação de Layout e Física Pacificada**:
+  - Estabilização imediata da simulação de nós para zero gasto residual de CPU e bateria.
+- **Suíte de Testes de Carga**:
+  - Benchmarks automatizados validando serialização de 1.000 nós em < 200ms e 3.000 nós em < 500ms, além de rajadas de 150 eventos sequenciais da IA.
+
+### 🧪 Testes
+- Suíte automatizada expandida para **85 testes unitários e de integração** com 100% de sucesso.
+
+---
+
 ## [2.1.0] - 2026-09-26
 
 ### ✨ Adicionado

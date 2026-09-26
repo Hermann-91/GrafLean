@@ -41,14 +41,23 @@ O **GrafLean** soluciona esse gargalo operando como uma **IDE de raio-X arquitet
   * Divisor interno entre Árvore e Editor de Código.
   * Divisor externo entre o Workspace de Código e o Grafo.
 * **Painel Direito — Grafo Top-Down Interativo:**
+  * **Triplo Seletor de Perspectivas:** Alternância instantânea na barra superior entre:
+    * `[ CÓDIGO ]`: Mapa estrutural arquitetural padrão por símbolos e conexões.
+    * `[ IA / GIT ]`: Foco dedicado nas mutações ativas com cores semânticas (verde=novo, laranja=modificado, vermelho=excluído), elementos neutros atenuados e animação pulsante da IA.
+    * `[ IMPACTO ]`: Foco cirúrgico no nó alterado e na sua cascata de chamadores e dependências de 1º e 2º grau.
   * **Seletor de Profundidade (Fase 1 vs Fase 2):** Alternância instantânea entre 🎯 *Fase 1 (Foco Direto)* e 🌐 *Fase 2 (Visão Transitiva)*, eliminando a poluição visual em projetos densos ou com super-hubs.
+  * **Proteção de Escala (Limite Inteligente):** Limite de renderização (`GRAPH_NODE_LIMIT = 250`) com banner de proteção não-obstrutivo e botão `Expandir Região` sob demanda.
+  * **Change Summary Banner:** Estatísticas em tempo real no topo da visão de mudanças com contadores e botão `Próxima Mudança ▶`.
   * **Navegação Desacoplada e Ergonômica:** **1 clique** no nó foca e inspeciona dependências e métricas no Inspetor mantendo o código aberto na tela; **2 cliques** confirmam a troca ativa de arquivo no editor e na árvore.
   * **Física Contínua e Suave:** Visualização orgânica com reposicionamento dinâmico sem congelamento da interface.
 
 ### 2. ⚡ Performance Instantânea & Live Reload em Tempo Real
 * **Carregamento Instantâneo (< 50ms) com Lazy Loading:** O servidor entrega a IDE de imediato sem leitura em massa de disco. O código de cada arquivo é buscado sob demanda apenas ao ser clicado (`/api/file-content`), otimizando projetos gigantes (como robôs de trading com mais de 2.200 nós).
 * **Abertura Pronta com Árvore e Código:** Ao entrar no workspace, a árvore de arquivos já está pronta e o primeiro arquivo já abre no editor Monokai sem espera.
-* **Sincronização Contínua Reativa (SSE):** Quando você ou a IA cria, altera ou exclui arquivos, o grafo e a árvore atualizam instantaneamente sem necessidade de recarregar a página (sem F5).
+* **Patches Incrementais Semânticos (SSE):** Quando você ou a IA cria, altera ou exclui arquivos, o backend emite eventos estruturados (`node_created`, `node_changed`, `node_deleted`, `ai_state`, etc.). O frontend aplica os patches diretamente no Vis.js sem destruir o grafo e sem perder as posições físicas dos nós.
+* **Endpoints REST para Agentes de IA:**
+  * `POST /api/ai-state`: Permite que assistentes de IA (ex: Claude, Gemini, CLI) sinalizem em tempo real qual arquivo estão criando, editando ou analisando.
+  * `POST /api/changes`: Consulta o resumo consolidado das alterações ativas (Git + IA).
 * **Preservação de Estado:** Ao recarregar, o sistema memoriza exatamente qual arquivo, linha e aba estavam ativos via `sessionStorage`.
 
 ### 3. 🎯 Rastreamento Git Instantâneo (< 5ms)
@@ -104,6 +113,7 @@ O GrafLean foi projetado aplicando os princípios das principais literaturas de 
    * **Mediator Pattern:** Sincronização desacoplada entre Grafo Vis.js, Árvore, Inspetor e Editor.
    * **Registry / Factory Pattern:** Seleção dinâmica do parser de acordo com a extensão do arquivo.
    * **Observer via SSE:** Disparo reativo de eventos de atualização do servidor para o cliente.
+   * **Single Responsibility & Template Cache:** Pacote modular `core/visualizer/` separando extração de dados (`GraphDataSerializer`), cache de assets em memória (`TemplateEngine`) e orquestração limpa.
 
 ---
 
@@ -136,13 +146,13 @@ graf-lens-new md docs/specs/TASK_CHECKOUT.md --template task
 
 ## 🧪 Suíte de Testes Automatizados
 
-Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (**71 testes automatizados** executando em ~1.4s com 100% de sucesso):
+Garantia de qualidade contínua com a biblioteca padrão `unittest` do Python (**85 testes automatizados** executando em ~1.2s com 100% de sucesso, incluindo testes de stress com 1.000 e 3.000 nós):
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
 ```
 ```text
-Ran 71 tests in 1.477s
+Ran 85 tests in 1.275s
 OK
 ```
 
